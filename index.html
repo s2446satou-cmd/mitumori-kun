@@ -67,7 +67,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 </style>
 </head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.9.1 試験版）</h2>
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.9.2 試験版）</h2>
 <p class="muted">ログイン後に使用できます。最初は「クラウドへ保存」を押してください。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
 <div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元</button></div>
 <p id="cloudStatus" class="muted">ログイン後に利用できます。</p></section><section class="card" id="authPanel" style="margin:12px auto;max-width:720px">
@@ -81,7 +81,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 <div id="authSigned" hidden><button class="soft" type="button" onclick="authSignOut()">ログアウト</button></div>
 <p class="muted">※この版はログイン機能の試験用です。見積もりデータはまだ端末内に保存され、アカウント別クラウド保存・課金制限は未実装です。</p>
 </section>
-<div class="card basic-info"><span class="tag">Ver.9.1 • クラウド試験版</span><h2 style="margin-top:12px">基本情報</h2>
+<div class="card basic-info"><span class="tag">Ver.9.2 • クラウド復元修正版</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>
@@ -260,8 +260,17 @@ if(error)throw error;
 if(!data){status('クラウドに保存データがありません。');return;}
 if(!confirm('端末内の見積・顧客・単価データがクラウドの内容で上書きされます。JSONバックアップは保存しましたか？')){status('復元をキャンセルしました');return;}
 const payload=data.data;
-if(!payload||!Array.isArray(payload.estimates)||!Array.isArray(payload.catalog))throw Error('クラウドのデータ形式が正しくありません');
-for(const k of keys){if(payload[k]!==null&&payload[k]!==undefined)localStorage.setItem('mk2_'+k,JSON.stringify(payload[k]));}
+// v9.1 stores absent localStorage keys as null. Null is valid for an empty account.
+if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('クラウドのデータ形式が正しくありません');
+for(const k of ['estimates','catalog','clients']){
+ if(payload[k]!==null&&payload[k]!==undefined&&!Array.isArray(payload[k]))throw Error(k+' のデータ形式が正しくありません');
+}
+// Apply only after all validation passes. Missing keys mean no local value.
+for(const k of keys){
+ if(!Object.prototype.hasOwnProperty.call(payload,k))continue;
+ if(payload[k]===null||payload[k]===undefined)localStorage.removeItem('mk2_'+k);
+ else localStorage.setItem('mk2_'+k,JSON.stringify(payload[k]));
+}
 location.reload();
 }catch(e){status('復元エラー：'+(e.message||e));}
 };

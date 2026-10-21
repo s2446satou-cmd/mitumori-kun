@@ -49,10 +49,26 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 .grid>.field>input[type=date]::-webkit-calendar-picker-indicator{margin:0}
 .grid>.field>textarea{width:100%;min-width:0}
 @media(max-width:390px){.grid{gap:8px!important}.grid>.field>input[type=date]{font-size:14px!important;padding:8px 4px!important}}
-</style></head><body>
+</style>
+<style id="v83-compact">
+/* Compact the basic-information card without touching line-item JS or printing. */
+.basic-info { padding: 12px 13px !important; }
+.basic-info .tag { padding: 3px 8px; font-size: 11px; }
+.basic-info h2 { margin: 5px 0 10px !important; }
+.basic-info .grid { gap: 8px !important; }
+.basic-info .field { margin-bottom: 8px !important; }
+.basic-info .field label { min-height: 0 !important; display: block !important; line-height: 1.3 !important; margin-bottom: 4px !important; }
+.basic-info .grid > .field > label { min-height: 0 !important; }
+.basic-info input { height: 43px !important; min-height: 43px !important; padding: 8px 10px !important; }
+.basic-info textarea { min-height: 62px !important; padding: 8px 10px !important; }
+.basic-info .grid > .field > input { height: 43px !important; min-height: 43px !important; }
+.basic-info input[type="date"] { padding: 8px 6px !important; }
+@media(max-width:390px) { .basic-info input[type="date"] { font-size: 14px !important; } }
+</style>
+</head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
 <main class="wrap">
-<div class="card"><span class="tag">Ver.8.1 • レイアウト修正版</span><h2 style="margin-top:12px">基本情報</h2>
+<div class="card basic-info"><span class="tag">Ver.8.3 • コンパクト版</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>

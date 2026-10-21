@@ -1,7 +1,7 @@
 {
   "name": "見積もりくん PRO",
   "short_name": "見積もりくん",
-  "start_url": "./index.html?v=51",
+  "start_url": "./index.html?v=60",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f2f5fa",

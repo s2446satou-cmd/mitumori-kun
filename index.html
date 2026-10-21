@@ -67,7 +67,10 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 </style>
 </head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="authPanel" style="margin:12px auto;max-width:720px">
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.9.1 試験版）</h2>
+<p class="muted">ログイン後に使用できます。最初は「クラウドへ保存」を押してください。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
+<div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元</button></div>
+<p id="cloudStatus" class="muted">ログイン後に利用できます。</p></section><section class="card" id="authPanel" style="margin:12px auto;max-width:720px">
 <h2>🔐 会員ログイン（試験版）</h2>
 <p class="muted" id="authState">接続を確認しています…</p>
 <div id="authForm">
@@ -78,7 +81,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 <div id="authSigned" hidden><button class="soft" type="button" onclick="authSignOut()">ログアウト</button></div>
 <p class="muted">※この版はログイン機能の試験用です。見積もりデータはまだ端末内に保存され、アカウント別クラウド保存・課金制限は未実装です。</p>
 </section>
-<div class="card basic-info"><span class="tag">Ver.9 • ログイン試験版</span><h2 style="margin-top:12px">基本情報</h2>
+<div class="card basic-info"><span class="tag">Ver.9.1 • クラウド試験版</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>
@@ -186,7 +189,7 @@ if ('caches' in window) {
 (function(){
 const PROJECT_URL='https://yndllgknfngcalsxwhyw.supabase.co';
 const PUBLIC_KEY='sb_publishable_0dSH3iQUgXNF9HVF9xlaVg_CzQyHkKF';
-let client=null;
+let client=null;window.mkCloudClient=()=>client;
 const el=id=>document.getElementById(id);
 function state(msg){el('authState').textContent=msg;}
 function errorText(e){return e?.message||'通信に失敗しました';}
@@ -224,5 +227,43 @@ if(!client)return;const {error}=await client.auth.signOut();
 if(error)state('ログアウトエラー：'+errorText(error));
 };
 ready();
+})();
+</script><script>
+(function(){
+const keys=['catalog','estimates','company','clients','invoiceSequence'];
+const status=msg=>document.getElementById('cloudStatus').textContent=msg;
+async function sessionClient(){
+const client=window.mkCloudClient?.();
+if(!client)throw Error('Supabaseに接続できていません');
+const {data,error}=await client.auth.getUser();
+if(error||!data?.user)throw Error('先にログインしてください');
+return {client,user:data.user};
+}
+window.cloudSave=async function(){
+try{
+const {client,user}=await sessionClient();
+if(!confirm('この端末のデータをクラウドに保存しますか？ 以前のクラウドデータは上書きされます。'))return;
+const data={};
+for(const k of keys){const raw=localStorage.getItem('mk2_'+k);data[k]=raw===null?null:JSON.parse(raw);}
+status('保存中…');
+const {error}=await client.from('user_backups').upsert({user_id:user.id,data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+if(error)throw error;
+status('クラウドに保存しました：'+new Date().toLocaleString('ja-JP'));
+}catch(e){status('保存エラー：'+(e.message||e));}
+};
+window.cloudRestore=async function(){
+try{
+const {client,user}=await sessionClient();
+status('クラウドを確認中…');
+const {data,error}=await client.from('user_backups').select('data,updated_at').eq('user_id',user.id).maybeSingle();
+if(error)throw error;
+if(!data){status('クラウドに保存データがありません。');return;}
+if(!confirm('端末内の見積・顧客・単価データがクラウドの内容で上書きされます。JSONバックアップは保存しましたか？')){status('復元をキャンセルしました');return;}
+const payload=data.data;
+if(!payload||!Array.isArray(payload.estimates)||!Array.isArray(payload.catalog))throw Error('クラウドのデータ形式が正しくありません');
+for(const k of keys){if(payload[k]!==null&&payload[k]!==undefined)localStorage.setItem('mk2_'+k,JSON.stringify(payload[k]));}
+location.reload();
+}catch(e){status('復元エラー：'+(e.message||e));}
+};
 })();
 </script></body></html>

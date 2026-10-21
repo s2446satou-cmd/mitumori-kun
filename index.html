@@ -82,6 +82,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 <div class="actions"><button class="primary" type="button" onclick="authSignUp()">新規登録</button><button class="soft" type="button" onclick="authSignIn()">ログイン</button></div>
 </div>
 <div id="authSigned" hidden><button class="soft" type="button" onclick="authSignOut()">ログアウト</button></div>
+<div id="stripeSubscribe" style="margin-top:12px"><button type="button" onclick="mkStartCheckout()">月額980円で利用開始（テスト決済）</button><p class="muted" id="stripeCheckoutStatus">テスト用の決済です。実際の請求は発生しません。</p></div>
 <p class="muted">※この版はログイン機能の試験用です。見積もりデータはまだ端末内に保存され、アカウント別クラウド保存・課金制限は未実装です。</p>
 </section>
 <div class="card basic-info"><span class="tag">Ver.9.4 • クラウド保存安全確認版</span><h2 style="margin-top:12px">基本情報</h2>
@@ -229,6 +230,20 @@ catch(e){state('ログインエラー：'+errorText(e));}
 window.authSignOut=async function(){
 if(!client)return;const {error}=await client.auth.signOut();
 if(error)state('ログアウトエラー：'+errorText(error));
+};
+window.mkStartCheckout=async function(){
+ const out=el('stripeCheckoutStatus');
+ const button=el('stripeSubscribe').querySelector('button');
+ if(!client){out.textContent='接続準備中です';return;}
+ button.disabled=true;out.textContent='決済ページを準備しています…';
+ try{
+  const {data:auth,error:authError}=await client.auth.getSession();
+  if(authError||!auth.session)throw Error('先にログインしてください');
+  const {data,error}=await client.functions.invoke('create-checkout-session',{body:{}});
+  if(error)throw Error(error.message||'決済ページを作成できません');
+  if(!data?.url||!data.url.startsWith('https://checkout.stripe.com/'))throw Error(data?.error||'決済URLが取得できません');
+  location.assign(data.url);
+ }catch(e){out.textContent='エラー：'+(e.message||String(e));button.disabled=false;}
 };
 ready();
 })();

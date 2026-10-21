@@ -67,9 +67,12 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 </style>
 </head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.9.2 試験版）</h2>
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.9.3 試験版）</h2>
 <p class="muted">ログイン後に使用できます。最初は「クラウドへ保存」を押してください。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
 <div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元</button></div>
+<div class="actions" style="margin-top:10px"><button type="button" class="soft" id="autoSyncToggle" onclick="mkAutoToggle()">自動保存：OFF（タップして有効化）</button></div>
+<p class="muted">自動保存はこの端末でのみ有効。初回は「クラウドへ保存」で保存内容を確定してください。別端末から変更された場合は上書きを停止します。</p>
+<p id="autoSyncStatus" class="muted">自動保存は停止中です。</p>
 <p id="cloudStatus" class="muted">ログイン後に利用できます。</p></section><section class="card" id="authPanel" style="margin:12px auto;max-width:720px">
 <h2>🔐 会員ログイン（試験版）</h2>
 <p class="muted" id="authState">接続を確認しています…</p>
@@ -81,7 +84,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 <div id="authSigned" hidden><button class="soft" type="button" onclick="authSignOut()">ログアウト</button></div>
 <p class="muted">※この版はログイン機能の試験用です。見積もりデータはまだ端末内に保存され、アカウント別クラウド保存・課金制限は未実装です。</p>
 </section>
-<div class="card basic-info"><span class="tag">Ver.9.2 • クラウド復元修正版</span><h2 style="margin-top:12px">基本情報</h2>
+<div class="card basic-info"><span class="tag">Ver.9.3 • クラウド復元修正版</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>
@@ -100,7 +103,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 </main><section id="printArea"></section>
 <script>
 const $=id=>document.getElementById(id), yen=n=>'¥'+Math.round(n||0).toLocaleString('ja-JP'), num=v=>Math.max(0,Number(v)||0);
-const get=(k,d)=>{try{return JSON.parse(localStorage.getItem('mk2_'+k))??d}catch(e){return d}},set=(k,v)=>localStorage.setItem('mk2_'+k,JSON.stringify(v));
+const get=(k,d)=>{try{return JSON.parse(localStorage.getItem('mk2_'+k))??d}catch(e){return d}},set=(k,v)=>{localStorage.setItem('mk2_'+k,JSON.stringify(v));window.mkAutoChanged?.();};
 const fields=['number','date','customer','project','location','notes','tax','discount','status','paid','workDate','dueDate','invoiceNumber','materialCost','laborDays','laborRate','subcontractCost','otherCost','overheadPrice'];
 let photos=[];let currentId=null,lines=[],catalog=get('catalog',[]),estimates=get('estimates',[]);
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -248,6 +251,7 @@ for(const k of keys){const raw=localStorage.getItem('mk2_'+k);data[k]=raw===null
 status('保存中…');
 const {error}=await client.from('user_backups').upsert({user_id:user.id,data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
 if(error)throw error;
+await window.mkAutoSaved?.(user.id);
 status('クラウドに保存しました：'+new Date().toLocaleString('ja-JP'));
 }catch(e){status('保存エラー：'+(e.message||e));}
 };
@@ -271,8 +275,99 @@ for(const k of keys){
  if(payload[k]===null||payload[k]===undefined)localStorage.removeItem('mk2_'+k);
  else localStorage.setItem('mk2_'+k,JSON.stringify(payload[k]));
 }
+window.mkAutoRestored?.(user.id,data.updated_at);
 location.reload();
 }catch(e){status('復元エラー：'+(e.message||e));}
 };
+})();
+</script><script>
+/* Ver.9.3: opt-in automatic cloud backup with server-side compare-and-swap.
+   No automatic restore or deletion. Only writes after an explicit manual cloud save/restore. */
+(function(){
+const dataKeys=['catalog','estimates','company','clients','invoiceSequence'];
+const key=(id,suffix)=>'mk93_'+id+'_'+suffix;
+let timer=null, busy=false, queued=false;
+const el=id=>document.getElementById(id);
+const show=msg=>{if(el('autoSyncStatus'))el('autoSyncStatus').textContent=msg;};
+let userId=null;
+async function identity(){
+ const client=window.mkCloudClient?.();
+ if(!client)throw Error('接続待ちです。ログインしてください');
+ const {data,error}=await client.auth.getUser();
+ if(error||!data?.user)throw Error('ログインしてください');
+ return {client,id:data.user.id};
+}
+function refresh(){
+ const enabled=userId&&localStorage.getItem(key(userId,'enabled'))==='1';
+ if(el('autoSyncToggle'))el('autoSyncToggle').textContent=enabled?'自動保存：ON（タップして停止）':'自動保存：OFF（タップして有効化）';
+}
+function snapshot(){
+ const out={};
+ for(const k of dataKeys){const raw=localStorage.getItem('mk2_'+k);out[k]=raw===null?null:JSON.parse(raw);}
+ return out;
+}
+async function flush(){
+ if(busy){queued=true;return;}
+ busy=true;
+ try{
+  const {client,id}=await identity();userId=id;
+  if(localStorage.getItem(key(id,'enabled'))!=='1')return;
+  const baseline=localStorage.getItem(key(id,'version'));
+  if(!baseline){show('自動保存停止：先に「クラウドへ保存」を押してください。');return;}
+  const payload=snapshot();
+  show('クラウドへ自動保存中…');
+  // CAS: if another device updated the row, do not overwrite.
+  const newStamp=new Date().toISOString();
+  const {data,error}=await client.from('user_backups')
+    .update({data:payload,updated_at:newStamp})
+    .eq('user_id',id).eq('updated_at',baseline)
+    .select('updated_at');
+  if(error)throw error;
+  if(!data||data.length!==1){
+   localStorage.setItem(key(id,'enabled'),'0');refresh();
+   show('⚠️ 別端末の更新または保存履歴の不一致を検出。自動保存を停止しました。JSONバックアップを取り、内容を確認してください。');
+   return;
+  }
+  localStorage.setItem(key(id,'version'),data[0].updated_at);
+  show('自動保存完了：'+new Date().toLocaleString('ja-JP'));
+ }catch(e){show('自動保存できませんでした：'+(e.message||e)+'。端末内には保存されています。');}
+ finally{busy=false;if(queued){queued=false;schedule();}}
+}
+function schedule(){
+ if(timer)clearTimeout(timer);
+ timer=setTimeout(()=>{timer=null;flush();},1800);
+}
+window.mkAutoChanged=function(){
+ if(!userId||localStorage.getItem(key(userId,'enabled'))!=='1')return;
+ schedule();
+};
+window.mkAutoSaved=async function(id){
+ userId=id;
+ try{
+  const {client}=await identity();
+  const {data,error}=await client.from('user_backups').select('updated_at').eq('user_id',id).single();
+  if(error)throw error;
+  localStorage.setItem(key(id,'version'),data.updated_at);
+  show('保存基準を更新しました。自動保存をONにできます。');
+ }catch(e){show('保存基準の取得に失敗：'+(e.message||e));}
+};
+window.mkAutoRestored=function(id,stamp){
+ localStorage.setItem(key(id,'version'),stamp);
+};
+window.mkAutoToggle=async function(){
+ try{
+  const {id}=await identity();userId=id;
+  const active=localStorage.getItem(key(id,'enabled'))==='1';
+  if(active){localStorage.setItem(key(id,'enabled'),'0');if(timer)clearTimeout(timer);refresh();show('自動保存を停止しました。');return;}
+  if(!localStorage.getItem(key(id,'version'))){show('先に「クラウドへ保存」を押してからONにしてください。');return;}
+  localStorage.setItem(key(id,'enabled'),'1');refresh();
+  show('自動保存ON。見積・顧客・単価の保存操作後にクラウドへ送信します。');
+ }catch(e){show(e.message||String(e));}
+};
+async function initialize(){
+ try{const {id}=await identity();userId=id;refresh();if(localStorage.getItem(key(id,'enabled'))==='1')show('自動保存ON。変更を待っています。');}
+ catch(e){show('ログイン後に自動保存を設定できます。');}
+}
+setTimeout(initialize,1200);
 })();
 </script></body></html>

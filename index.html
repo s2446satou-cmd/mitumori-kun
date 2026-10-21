@@ -67,8 +67,18 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 </style>
 </head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap">
-<div class="card basic-info"><span class="tag">Ver.8.3 • コンパクト版</span><h2 style="margin-top:12px">基本情報</h2>
+<main class="wrap"><section class="card" id="authPanel" style="margin:12px auto;max-width:720px">
+<h2>🔐 会員ログイン（試験版）</h2>
+<p class="muted" id="authState">接続を確認しています…</p>
+<div id="authForm">
+<div class="field"><label>メールアドレス</label><input id="authEmail" type="email" autocomplete="email" placeholder="example@email.com"></div>
+<div class="field"><label>パスワード（6文字以上）</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6"></div>
+<div class="actions"><button class="primary" type="button" onclick="authSignUp()">新規登録</button><button class="soft" type="button" onclick="authSignIn()">ログイン</button></div>
+</div>
+<div id="authSigned" hidden><button class="soft" type="button" onclick="authSignOut()">ログアウト</button></div>
+<p class="muted">※この版はログイン機能の試験用です。見積もりデータはまだ端末内に保存され、アカウント別クラウド保存・課金制限は未実装です。</p>
+</section>
+<div class="card basic-info"><span class="tag">Ver.9 • ログイン試験版</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>
@@ -171,4 +181,48 @@ if ('serviceWorker' in navigator) {
 if ('caches' in window) {
   caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('mitumori-pro-')).map(k=>caches.delete(k)))).catch(()=>{});
 }
+</script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+const PROJECT_URL='https://yndllgknfngcalsxwhyw.supabase.co';
+const PUBLIC_KEY='sb_publishable_0dSH3iQUgXNF9HVF9xlaVg_CzQyHkKF';
+let client=null;
+const el=id=>document.getElementById(id);
+function state(msg){el('authState').textContent=msg;}
+function errorText(e){return e?.message||'通信に失敗しました';}
+function render(user){
+el('authForm').hidden=!!user;el('authSigned').hidden=!user;
+state(user?'ログイン中：'+user.email:'未ログイン（会員登録またはログインしてください）');
+}
+async function ready(){
+if(!window.supabase?.createClient){state('認証ライブラリを読み込めません。通信状態を確認してください。');return;}
+try{
+client=window.supabase.createClient(PROJECT_URL,PUBLIC_KEY);
+const {data,error}=await client.auth.getSession();if(error)throw error;
+render(data.session?.user);
+client.auth.onAuthStateChange((_event,session)=>render(session?.user));
+}catch(e){state('接続エラー：'+errorText(e));}
+}
+function credentials(){return {email:el('authEmail').value.trim(),password:el('authPassword').value};}
+window.authSignUp=async function(){
+if(!client)return state('接続準備中です');
+const {email,password}=credentials();
+if(!email||password.length<6)return state('メールアドレスと6文字以上のパスワードを入力してください');
+state('登録処理中…');
+try{const {data,error}=await client.auth.signUp({email,password});if(error)throw error;
+state(data.session?'登録してログインしました':'登録を受け付けました。メールが届いたら認証リンクを開いてください。');
+}catch(e){state('登録エラー：'+errorText(e));}
+};
+window.authSignIn=async function(){
+if(!client)return state('接続準備中です');
+const {email,password}=credentials();state('ログイン処理中…');
+try{const {error}=await client.auth.signInWithPassword({email,password});if(error)throw error;}
+catch(e){state('ログインエラー：'+errorText(e));}
+};
+window.authSignOut=async function(){
+if(!client)return;const {error}=await client.auth.signOut();
+if(error)state('ログアウトエラー：'+errorText(error));
+};
+ready();
+})();
 </script></body></html>

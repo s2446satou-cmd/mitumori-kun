@@ -67,7 +67,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 </style>
 </head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.10 安全同期版）</h2>
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.10.1 自動読込版）</h2>
 <p class="muted">ログイン後に使用できます。最初は「クラウドへ保存」を押してください。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
 <div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元</button></div>
 <div class="actions" style="margin-top:10px"><button type="button" class="soft" id="autoSyncToggle" onclick="mkAutoToggle()">自動保存：OFF（タップして有効化）</button></div>
@@ -206,8 +206,8 @@ try{
 client=window.supabase.createClient(PROJECT_URL,PUBLIC_KEY);
 const {data,error}=await client.auth.getSession();if(error)throw error;
 render(data.session?.user);
-client.auth.onAuthStateChange((_event,session)=>{render(session?.user);if(session?.user)window.mkCloudCheck?.();});
-if(data.session?.user)window.mkCloudCheck?.();
+client.auth.onAuthStateChange((_event,session)=>{render(session?.user);if(session?.user){window.mkCloudCheck?.();window.mkAutoLoad?.();}});
+if(data.session?.user){window.mkCloudCheck?.();window.mkAutoLoad?.();}
 }catch(e){state('接続エラー：'+errorText(e));}
 }
 function credentials(){return {email:el('authEmail').value.trim(),password:el('authPassword').value};}
@@ -243,6 +243,40 @@ const {data,error}=await client.auth.getUser();
 if(error||!data?.user)throw Error('先にログインしてください');
 return {client,user:data.user};
 }
+// Auto-load only into an empty local account. Never overwrite existing work.
+let autoLoadBusy=false;
+window.mkAutoLoad=async function(){
+ if(autoLoadBusy)return;
+ autoLoadBusy=true;
+ try{
+  const {client,user}=await sessionClient();
+  const local=JSON.parse(localStorage.getItem('mk2_estimates')||'[]');
+  if(!Array.isArray(local)||local.length>0)return;
+  const {data,error}=await client.from('user_backups').select('data,updated_at').eq('user_id',user.id).maybeSingle();
+  if(error)throw error;
+  const payload=data?.data;
+  if(!payload||!Array.isArray(payload.estimates)||payload.estimates.length===0)return;
+  for(const k of ['catalog','clients'])if(payload[k]!=null&&!Array.isArray(payload[k]))throw Error('クラウドデータが不正です');
+  // A separate browser session may contain settings or unsaved local work.
+  // Only auto-load if all local app data is absent or empty.
+  const hasOtherData=['catalog','clients','company'].some(k=>{
+   const raw=localStorage.getItem('mk2_'+k);if(!raw)return false;
+   try{const v=JSON.parse(raw);return v&&typeof v==='object'&&Object.keys(v).length>0;}catch{return true;}
+  });
+  if(hasOtherData){status('端末に既存データがあります。自動復元せず保護しました。必要なら手動で復元してください。');return;}
+  for(const k of keys){
+   if(!Object.prototype.hasOwnProperty.call(payload,k))continue;
+   if(payload[k]==null)localStorage.removeItem('mk2_'+k);
+   else localStorage.setItem('mk2_'+k,JSON.stringify(payload[k]));
+  }
+  window.mkAutoRestored?.(user.id,data.updated_at);
+  sessionStorage.setItem('mk101_autoload_notice',String(payload.estimates.length));
+  location.reload();
+ }catch(e){status('自動読込エラー：'+(e.message||e)+'。手動復元は利用できます。');}
+ finally{autoLoadBusy=false;}
+};
+const notice=sessionStorage.getItem('mk101_autoload_notice');
+if(notice){sessionStorage.removeItem('mk101_autoload_notice');setTimeout(()=>status('クラウドから見積書'+notice+'件を自動で読み込みました。'),600);}
 window.mkCloudCheck=async function(){
  try{const {client,user}=await sessionClient();const {data,error}=await client.from('user_backups').select('data,updated_at').eq('user_id',user.id).maybeSingle();if(error)throw error;
  const remote=Array.isArray(data?.data?.estimates)?data.data.estimates.length:0;
@@ -296,7 +330,7 @@ location.reload();
 })();
 </script><script>
 /* Ver.10: opt-in automatic cloud backup with server-side compare-and-swap.
-   No automatic restore or deletion. Only writes after an explicit manual cloud save/restore. */
+   Automatic restore is restricted to empty local accounts. No automatic deletion. */
 (function(){
 const dataKeys=['catalog','estimates','company','clients','invoiceSequence'];
 const key=(id,suffix)=>'mk93_'+id+'_'+suffix;

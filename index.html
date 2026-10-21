@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>見積もりくん PRO Ver.7.1</title>
+<title>見積もりくん PRO Ver.7.2</title>
 <link rel="manifest" href="./manifest.webmanifest?v=60">
 <meta name="theme-color" content="#101f38">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,7 +18,7 @@
 </style></head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
 <main class="wrap">
-<div class="card"><span class="tag">Ver.7.1 • ホーム画面対応</span><h2 style="margin-top:12px">基本情報</h2>
+<div class="card"><span class="tag">Ver.7.2 • ホーム画面対応</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>
@@ -32,7 +32,7 @@
 <div class="card"><h2>🧮 工事原価・経費管理</h2><p class="muted">材料費・人工・外注費・諸経費を案件単位で入力。見積書には原価を表示しません。</p><div class="grid"><div class="field"><label>追加材料費（円）</label><input id="materialCost" type="number" min="0" value="0" oninput="refresh()"></div><div class="field"><label>人工数（人日）</label><input id="laborDays" type="number" min="0" step="0.5" value="0" oninput="refresh()"></div><div class="field"><label>人工原価（円/人日）</label><input id="laborRate" type="number" min="0" value="0" oninput="refresh()"></div><div class="field"><label>外注費（円）</label><input id="subcontractCost" type="number" min="0" value="0" oninput="refresh()"></div><div class="field"><label>交通費・駐車場・その他経費（円）</label><input id="otherCost" type="number" min="0" value="0" oninput="refresh()"></div><div class="field"><label>諸経費（売価・税抜円）</label><input id="overheadPrice" type="number" min="0" value="0" oninput="refresh()"></div></div><p class="muted">粗利＝税抜売価（諸経費込み・値引き後）－ 明細原価 － 追加原価。原価は概算です。</p></div><div class="card"><h2>📷 現場写真（案件別）</h2><p class="muted">写真はこの端末内の保存済み案件に紐づきます。容量節約のため縮小保存（最大6枚）。追加後は「この見積もりを保存」を押してください。</p><input type="file" accept="image/*" multiple onchange="addPhotos(this)"><div id="photoList" class="photoGrid"></div></div><div class="card"><h2>案件ステータス・請求管理</h2><div class="grid"><div class="field"><label>進捗状況</label><select id="status"><option>見積中</option><option>提出済</option><option>受注</option><option>施工中</option><option>完了</option><option>請求済</option><option>入金済</option></select></div><div class="field"><label>入金額（税込・円）</label><input id="paid" type="number" min="0" value="0"></div><div class="field"><label>工事予定日</label><input id="workDate" type="date"></div><div class="field"><label>請求書番号</label><input id="invoiceNumber" placeholder="自動発行"></div><div class="field"><label>支払期限</label><input id="dueDate" type="date"></div></div><p class="muted">案件の進捗と入金状況を保存できます。入金額は手動登録です。</p><div class="actions"><button class="primary" onclick="convertInvoice()">見積から請求書へ変換</button><button class="dark" onclick="printInvoice()">請求書をPDF・印刷</button><button class="soft" onclick="printReceipt()">領収書をPDF・印刷</button></div></div><div class="card"><h2>保存・見積書出力</h2><div class="actions"><button class="primary" onclick="saveEstimate()">この見積もりを保存</button><button class="dark" onclick="printEstimate()">見積書をPDF・印刷</button><button class="soft" onclick="duplicateEstimate()">見積もりを複製</button><button class="soft" onclick="newEstimate()">新規作成</button></div><p class="muted">PDFはiPhoneの印刷画面から「共有」→「ファイルに保存」で保存できます。</p></div>
 <div class="card"><h2>自社情報（見積書に表示）</h2><div class="field"><label>屋号・会社名</label><input id="company" placeholder="例：Y's エアワークス"></div><div class="field"><label>住所・電話・登録番号など</label><textarea id="companyDetails" placeholder="〒...&#10;TEL ..."></textarea></div><div class="grid"><div class="field"><label>振込先</label><textarea id="bankDetails" placeholder="銀行名・支店名・口座番号・名義"></textarea></div><div class="field"><label>見積有効期限</label><input id="validUntil" type="date"></div></div><div class="field"><label>会社ロゴ（画像を選択）</label><input type="file" accept="image/png,image/jpeg,image/webp" onchange="setLogo(this)"><img id="logoPreview" class="logoPreview" alt=""></div><button class="soft" onclick="saveCompany()">自社情報を保存</button></div>
 <div class="card"><h2>単価マスター</h2><div class="grid"><div class="field"><label>項目名</label><input id="catName" placeholder="例：エアコン取付"></div><div class="field"><label>単位</label><input id="catUnit" value="式"></div><div class="field"><label>売価単価（円）</label><input id="catPrice" type="number" min="0"></div><div class="field"><label>原価単価（円）</label><input id="catCost" type="number" min="0"></div></div><button class="soft" onclick="saveCatalog()">単価を登録</button><div id="catalogList"></div></div>
-<div class="card"><h2>経営ダッシュボード</h2><div id="dashboard" class="summary"></div><p class="muted">保存済み案件から算出。売上は「入金済」の税抜見積額を集計した参考値です。実際の会計売上や消費税申告額とは異なる場合があります。</p></div><div class="card"><h2>顧客台帳</h2><div class="grid"><div class="field"><label>顧客名</label><input id="clientName"></div><div class="field"><label>電話番号</label><input id="clientPhone" type="tel"></div><div class="field wide"><label>住所</label><input id="clientAddress" placeholder="郵便番号・住所"><div class="field wide"><label>メモ</label><input id="clientMemo"></div></div><button class="soft" onclick="addClient()">顧客を登録</button><div id="clientsList"></div></div><div class="card"><h2>データのバックアップ</h2><div class="actions"><button class="soft" onclick="exportData()">JSONバックアップ保存</button><button class="soft" onclick="document.getElementById('importFile').click()">バックアップ復元</button><input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(this)"></div><p class="muted">復元すると現在のデータを上書きします。個人情報を含むバックアップファイルは安全に保管してください。</p></div><div class="card"><h2>保存済み見積もり</h2><div class="field"><label>保存済み見積もりを検索</label><input id="estimateSearch" placeholder="顧客名・件名・番号" oninput="renderSaved()"></div><div id="savedList"></div></div>
+<div class="card"><h2>経営ダッシュボード</h2><div id="dashboard" class="summary"></div><p class="muted">保存済み案件から算出。売上は「入金済」の税抜見積額を集計した参考値です。実際の会計売上や消費税申告額とは異なる場合があります。</p></div><div class="card"><h2>顧客台帳</h2><div class="grid"><div class="field"><label>顧客名</label><input id="clientName"></div><div class="field"><label>電話番号</label><input id="clientPhone" type="tel"></div><div class="field wide"><label>住所</label><input id="clientAddress" placeholder="郵便番号・住所"></div><div class="field wide"><label>メモ</label><input id="clientMemo"></div><button class="soft" onclick="addClient()">顧客を登録</button><div id="clientsList"></div></div><div class="card"><h2>データのバックアップ</h2><div class="actions"><button class="soft" onclick="exportData()">JSONバックアップ保存</button><button class="soft" onclick="document.getElementById('importFile').click()">バックアップ復元</button><input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(this)"></div><p class="muted">復元すると現在のデータを上書きします。個人情報を含むバックアップファイルは安全に保管してください。</p></div><div class="card"><h2>保存済み見積もり</h2><div class="field"><label>保存済み見積もりを検索</label><input id="estimateSearch" placeholder="顧客名・件名・番号" oninput="renderSaved()"></div><div id="savedList"></div></div>
 <div class="notice">⚠️ 保存データはこのブラウザ内のみです。Safariの履歴・Webサイトデータを削除すると消える場合があります。別端末への同期・バックアップはありません。実在の顧客情報を入れる前に、試作用の架空データで動作を確認してください。公開GitHubには顧客情報をアップロードしないでください。</div>
 </main><section id="printArea"></section>
 <script>
@@ -42,13 +42,23 @@ const fields=['number','date','customer','project','location','notes','tax','dis
 let photos=[];let currentId=null,lines=[],catalog=get('catalog',[]),estimates=get('estimates',[]);
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function addLine(item={name:'',qty:1,unit:'式',price:0,cost:0}){lines.push({...item});renderLines()}
-function renderLines(){ $('lines').innerHTML=lines.map((l,i)=>`<div class="line">
-<div><label>項目名</label><input aria-label="項目名" value="${esc(l.name)}" oninput="updateLine(${i},'name',this.value)"></div>
-<div><label>数量</label><input aria-label="数量" type="number" min="0" step="any" value="${l.qty}" oninput="updateLine(${i},'qty',this.value)"></div>
-<div><label>売価/単位</label><input aria-label="売価" type="number" min="0" value="${l.price}" oninput="updateLine(${i},'price',this.value)"></div>
-<div><label>原価/単位</label><input aria-label="原価" type="number" min="0" value="${l.cost}" oninput="updateLine(${i},'cost',this.value)"></div>
-<button class="remove" aria-label="削除" onclick="lines.splice(${i},1);renderLines()">×</button></div>`).join('');refresh()}
-function updateLine(i,k,v){lines[i][k]=['qty','price','cost'].includes(k)?num(v):v;refresh()}
+function renderLines(){
+ const host=$('lines');host.replaceChildren();
+ lines.forEach((line,i)=>{
+  const row=document.createElement('div');row.className='line';
+  for(const [label,key,kind] of [['項目名','name','text'],['数量','qty','number'],['売価/単位','price','number'],['原価/単位','cost','number']]){
+   const box=document.createElement('div'),caption=document.createElement('label'),input=document.createElement('input');
+   caption.textContent=label;input.type=kind;input.setAttribute('aria-label',label);
+   if(kind==='number'){input.min='0';input.step='any';input.inputMode='decimal'}
+   input.value=line[key]??'';input.autocomplete='off';
+   input.addEventListener('input',()=>{lines[i][key]=kind==='number'?num(input.value):input.value;refresh()});
+   box.append(caption,input);row.append(box);
+  }
+  const remove=document.createElement('button');remove.type='button';remove.className='remove';remove.textContent='×';remove.setAttribute('aria-label','削除');
+  remove.addEventListener('click',()=>{lines.splice(i,1);renderLines()});row.append(remove);host.append(row);
+ });refresh();
+}
+function updateLine(i,k,v){if(!lines[i])return;lines[i][k]=['qty','price','cost'].includes(k)?num(v):v;refresh()}
 function calc(){let raw=lines.reduce((a,l)=>a+num(l.qty)*num(l.price),0),subtotal=Math.max(0,raw+num($('overheadPrice').value)-num($('discount').value)),tax=Math.floor(subtotal*num($('tax').value)/100),cost=lines.reduce((a,l)=>a+num(l.qty)*num(l.cost),0)+num($('materialCost').value)+num($('laborDays').value)*num($('laborRate').value)+num($('subcontractCost').value)+num($('otherCost').value),profit=subtotal-cost;return {subtotal,tax,cost,profit,total:subtotal+tax,rate:subtotal?profit/subtotal*100:0}}
 function refresh(){let x=calc();$('subtotal').textContent=yen(x.subtotal);$('taxAmount').textContent=yen(x.tax);$('total').textContent=yen(x.total);$('cost').textContent=yen(x.cost);$('profit').textContent=yen(x.profit)+' / '+x.rate.toFixed(1)+'%'}
 function form(){return {id:currentId||String(Date.now()),...Object.fromEntries(fields.map(k=>[k,$(k).value])),lines:structuredClone(lines),photos:structuredClone(photos)}}

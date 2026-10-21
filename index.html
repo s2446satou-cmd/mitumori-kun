@@ -67,7 +67,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 </style>
 </head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.9.3 試験版）</h2>
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.9.4 安全確認版）</h2>
 <p class="muted">ログイン後に使用できます。最初は「クラウドへ保存」を押してください。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
 <div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元</button></div>
 <div class="actions" style="margin-top:10px"><button type="button" class="soft" id="autoSyncToggle" onclick="mkAutoToggle()">自動保存：OFF（タップして有効化）</button></div>
@@ -84,7 +84,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 <div id="authSigned" hidden><button class="soft" type="button" onclick="authSignOut()">ログアウト</button></div>
 <p class="muted">※この版はログイン機能の試験用です。見積もりデータはまだ端末内に保存され、アカウント別クラウド保存・課金制限は未実装です。</p>
 </section>
-<div class="card basic-info"><span class="tag">Ver.9.3 • クラウド復元修正版</span><h2 style="margin-top:12px">基本情報</h2>
+<div class="card basic-info"><span class="tag">Ver.9.4 • クラウド保存安全確認版</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>
@@ -99,7 +99,7 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 <details class="card fold"><summary>自社情報（見積書に表示）</summary><div class="field"><label>屋号・会社名</label><input id="company" placeholder="例：Y's エアワークス"></div><div class="field"><label>住所・電話・登録番号など</label><textarea id="companyDetails" placeholder="〒...&#10;TEL ..."></textarea></div><div class="grid"><div class="field"><label>振込先</label><textarea id="bankDetails" placeholder="銀行名・支店名・口座番号・名義"></textarea></div><div class="field"><label>見積有効期限</label><input id="validUntil" type="date"></div></div><div class="field"><label>会社ロゴ（画像を選択）</label><input type="file" accept="image/png,image/jpeg,image/webp" onchange="setLogo(this)"><img id="logoPreview" class="logoPreview" alt=""></div><button class="soft" onclick="saveCompany()">自社情報を保存</button></details>
 <details class="card fold"><summary>単価マスター</summary><div class="grid"><div class="field"><label>項目名</label><input id="catName" placeholder="例：エアコン取付"></div><div class="field"><label>単位</label><input id="catUnit" value="式"></div><div class="field"><label>売価単価（円）</label><input id="catPrice" type="number" min="0"></div><div class="field"><label>原価単価（円）</label><input id="catCost" type="number" min="0"></div></div><button class="soft" onclick="saveCatalog()">単価を登録</button><div id="catalogList"></div></details>
 <div class="card"><h2>経営ダッシュボード</h2><div id="dashboard" class="summary"></div><p class="muted">保存済み案件から算出。売上は「入金済」の税抜見積額を集計した参考値です。実際の会計売上や消費税申告額とは異なる場合があります。</p></div><details class="card fold"><summary>顧客台帳</summary><div class="grid"><div class="field"><label>顧客名</label><input id="clientName"></div><div class="field"><label>電話番号</label><input id="clientPhone" type="tel"></div><div class="field wide"><label>住所</label><input id="clientAddress" placeholder="郵便番号・住所"></div><div class="field wide"><label>メモ</label><input id="clientMemo"></div><button class="soft" onclick="addClient()">顧客を登録</button><div id="clientsList"></div></details><details class="card fold"><summary>データのバックアップ</summary><div class="actions"><button class="soft" onclick="exportData()">JSONバックアップ保存</button><button class="soft" onclick="document.getElementById('importFile').click()">バックアップ復元</button><input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(this)"></div><p class="muted">復元すると現在のデータを上書きします。個人情報を含むバックアップファイルは安全に保管してください。</p></details><div class="card"><h2>保存済み見積もり</h2><div class="field"><label>保存済み見積もりを検索</label><input id="estimateSearch" placeholder="顧客名・件名・番号" oninput="renderSaved()"></div><div id="savedList"></div></div>
-<div class="notice">⚠️ 保存データはこのブラウザ内のみです。Safariの履歴・Webサイトデータを削除すると消える場合があります。別端末への同期・バックアップはありません。実在の顧客情報を入れる前に、試作用の架空データで動作を確認してください。公開GitHubには顧客情報をアップロードしないでください。</div>
+<div class="notice">⚠️ データは端末内に保存されます。クラウド機能はログインと手動保存または自動保存ONが必要です。SafariのWebサイトデータを削除する前にJSONバックアップを保存してください。実在の顧客情報を入れる前に、試作用の架空データで動作を確認してください。公開GitHubには顧客情報をアップロードしないでください。</div>
 </main><section id="printArea"></section>
 <script>
 const $=id=>document.getElementById(id), yen=n=>'¥'+Math.round(n||0).toLocaleString('ja-JP'), num=v=>Math.max(0,Number(v)||0);
@@ -245,7 +245,13 @@ return {client,user:data.user};
 window.cloudSave=async function(){
 try{
 const {client,user}=await sessionClient();
-if(!confirm('この端末のデータをクラウドに保存しますか？ 以前のクラウドデータは上書きされます。'))return;
+const localEstimates=JSON.parse(localStorage.getItem('mk2_estimates')||'[]');
+const {data:existing,error:readError}=await client.from('user_backups').select('data').eq('user_id',user.id).maybeSingle();
+if(readError)throw readError;
+const cloudCount=Array.isArray(existing?.data?.estimates)?existing.data.estimates.length:0;
+const localCount=Array.isArray(localEstimates)?localEstimates.length:0;
+if(cloudCount>0&&localCount===0){status('保存を中止：クラウドに見積書が'+cloudCount+'件あり、端末は0件です。先に「クラウドから復元」を確認してください。');return;}
+if(!confirm('端末の見積書 '+localCount+'件をクラウドに保存します。クラウドの見積書 '+cloudCount+'件を上書きします。続けますか？'))return;
 const data={};
 for(const k of keys){const raw=localStorage.getItem('mk2_'+k);data[k]=raw===null?null:JSON.parse(raw);}
 status('保存中…');
@@ -262,7 +268,7 @@ status('クラウドを確認中…');
 const {data,error}=await client.from('user_backups').select('data,updated_at').eq('user_id',user.id).maybeSingle();
 if(error)throw error;
 if(!data){status('クラウドに保存データがありません。');return;}
-if(!confirm('端末内の見積・顧客・単価データがクラウドの内容で上書きされます。JSONバックアップは保存しましたか？')){status('復元をキャンセルしました');return;}
+if(!confirm('クラウドの見積書 '+(Array.isArray(data.data?.estimates)?data.data.estimates.length:0)+'件を復元します。端末内のデータを上書きします。JSONバックアップを保存済みですか？')){status('復元をキャンセルしました');return;}
 const payload=data.data;
 // v9.1 stores absent localStorage keys as null. Null is valid for an empty account.
 if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('クラウドのデータ形式が正しくありません');

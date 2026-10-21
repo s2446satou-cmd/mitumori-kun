@@ -28,10 +28,19 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 #lines .line{padding:10px!important;margin-bottom:9px!important;gap:7px!important}
 #lines .line input{min-height:43px!important}
 @media(max-width:530px){#lines .line{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+</style><style id="v81-layout-fix">
+/* Keep two-column forms within the phone viewport, including iOS date inputs. */
+.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.grid>.field,.grid>div{min-width:0;max-width:100%}
+.grid .field input,.grid .field select,.grid .field textarea{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;font-size:16px}
+.grid .field label{overflow-wrap:anywhere;line-height:1.35}
+/* Compact document number, invoice number and overhead fields without overflow. */
+#number,#invoiceNumber,#overheadPrice{width:100%;min-width:0;max-width:100%;min-height:40px!important;padding:8px 9px!important;border-radius:8px}
+@media(max-width:390px){.grid{column-gap:7px!important}.grid .field{min-width:0}.grid .field input[type=date]{padding:7px 4px!important;font-size:14px}}
 </style></head><body>
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
 <main class="wrap">
-<div class="card"><span class="tag">Ver.8.0 • シンプル版</span><h2 style="margin-top:12px">基本情報</h2>
+<div class="card"><span class="tag">Ver.8.1 • レイアウト修正版</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>

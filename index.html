@@ -72,13 +72,13 @@ body.mk-locked #backupPanel .backup-restore { display:none !important; }
 </style>
 </head><body class="mk-locked">
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.10.5 ログイン判定修正版）</h2>
-<p class="muted">ログイン後に使用できます。最初は「クラウドへ保存」を押してください。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
-<div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元</button></div>
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.10.6 解約後クラウド復元対応）</h2>
+<p class="muted">ログインしていれば解約後もクラウド復元できます。保存と復元は別操作です。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
+<div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元（解約後も可）</button></div>
 <div class="actions" style="margin-top:10px"><button type="button" class="soft" id="autoSyncToggle" onclick="mkAutoToggle()">自動保存：OFF（タップして有効化）</button></div>
 <p class="muted">自動保存はこの端末でのみ有効。初回は「クラウドへ保存」で保存内容を確定してください。別端末から変更された場合は上書きを停止します。</p>
 <p id="autoSyncStatus" class="muted">自動保存は停止中です。</p>
-<p id="cloudStatus" class="muted">ログイン後に利用できます。</p></section><section class="card" id="authPanel" style="margin:12px auto;max-width:720px">
+<p id="cloudStatus" class="muted">クラウド接続を確認中です…</p></section><section class="card" id="authPanel" style="margin:12px auto;max-width:720px">
 <h2>🔐 会員ログイン（試験版）</h2>
 <p class="muted" id="authState">接続を確認しています…</p>
 <div id="authForm">
@@ -289,7 +289,8 @@ const client=window.mkCloudClient?.();
 if(!client)throw Error('Supabaseに接続できていません');
 // Match the session used by the login UI. Database access remains protected by Supabase RLS.
 const {data,error}=await client.auth.getSession();
-if(error||!data?.session?.user)throw Error('ログイン情報を確認できません。再ログインしてください');
+if(error)throw Error('ログイン状態の確認エラー：'+(error.message||String(error)));
+if(!data?.session?.user)throw Error('ログインセッションがありません。ログインし直してください');
 return {client,user:data.session.user};
 }
 // Auto-load only into an empty local account. Never overwrite existing work.

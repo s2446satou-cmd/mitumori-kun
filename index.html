@@ -64,8 +64,12 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 .basic-info .grid > .field > input { height: 43px !important; min-height: 43px !important; }
 .basic-info input[type="date"] { padding: 8px 6px !important; }
 @media(max-width:390px) { .basic-info input[type="date"] { font-size: 14px !important; } }
+
+/* Membership UI lock; server-side RLS is still required for actual access control. */
+body.mk-locked main.wrap > :not(#authPanel):not(#cloudPanel) { display:none !important; }
+#memberPanel { margin:12px auto;max-width:720px; }
 </style>
-</head><body>
+</head><body class="mk-locked">
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
 <main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.10.1 自動読込版）</h2>
 <p class="muted">ログイン後に使用できます。最初は「クラウドへ保存」を押してください。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
@@ -82,8 +86,10 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 <div class="actions"><button class="primary" type="button" onclick="authSignUp()">新規登録</button><button class="soft" type="button" onclick="authSignIn()">ログイン</button></div>
 </div>
 <div id="authSigned" hidden><button class="soft" type="button" onclick="authSignOut()">ログアウト</button></div>
+<p class="muted" id="membershipState" role="status" aria-live="polite">契約状況を確認しています…</p>
+<div class="actions"><button type="button" class="soft" onclick="mkRefreshMembership()">契約状況を再確認</button></div>
 <div id="stripeSubscribe" style="margin-top:12px"><button type="button" onclick="mkStartCheckout()">月額980円で利用開始（テスト決済）</button><p class="muted" id="stripeCheckoutStatus">テスト用の決済です。実際の請求は発生しません。</p></div>
-<p class="muted">※この版はログイン機能の試験用です。見積もりデータはまだ端末内に保存され、アカウント別クラウド保存・課金制限は未実装です。</p>
+<p class="muted">※テスト環境用です。画面の利用制限は簡易的なものです。本番販売にはサーバー側の利用制限・解約更新処理・重複契約防止が必要です。</p>
 </section>
 <div class="card basic-info"><span class="tag">Ver.9.4 • クラウド保存安全確認版</span><h2 style="margin-top:12px">基本情報</h2>
 <div class="grid"><div class="field"><label>見積番号</label><input id="number"></div><div class="field"><label>見積日</label><input type="date" id="date"></div></div>
@@ -194,20 +200,43 @@ if ('caches' in window) {
 const PROJECT_URL='https://yndllgknfngcalsxwhyw.supabase.co';
 const PUBLIC_KEY='sb_publishable_0dSH3iQUgXNF9HVF9xlaVg_CzQyHkKF';
 let client=null;window.mkCloudClient=()=>client;
+let memberCheckId=0;
+const activeStatuses=new Set(['active','trialing']);
+function membershipUI(message,enabled){
+ const out=el('membershipState');if(out)out.textContent=message;
+ document.body.classList.toggle('mk-locked',!enabled);
+ const subscribe=el('stripeSubscribe');if(subscribe)subscribe.hidden=enabled;
+}
+window.mkRefreshMembership=async function(){
+ const token=++memberCheckId;
+ membershipUI('契約状況を確認しています…',false);
+ if(!client){membershipUI('接続待ちです。',false);return;}
+ try{
+  const {data:auth,error:authError}=await client.auth.getUser();
+  if(authError)throw authError;
+  if(!auth?.user){membershipUI('ログインすると契約状況を確認できます。',false);return;}
+  const {data,error}=await client.from('subscriptions').select('status,current_period_end').eq('user_id',auth.user.id).maybeSingle();
+  if(token!==memberCheckId)return;
+  if(error)throw error;
+  const valid=!!data&&activeStatuses.has(data.status);
+  membershipUI(valid?'PRO会員：'+data.status+'（テスト契約を確認しました）':'有効なPRO契約が見つかりません。テスト決済後に「契約状況を再確認」を押してください。',valid);
+ }catch(e){if(token===memberCheckId)membershipUI('契約を確認できません：'+(e.message||String(e))+'。通信と設定を確認してください。',false);}
+};
 const el=id=>document.getElementById(id);
 function state(msg){el('authState').textContent=msg;}
 function errorText(e){return e?.message||'通信に失敗しました';}
 function render(user){
 el('authForm').hidden=!!user;el('authSigned').hidden=!user;
 state(user?'ログイン中：'+user.email:'未ログイン（会員登録またはログインしてください）');
+if(!user){++memberCheckId;membershipUI('ログインすると契約状況を確認できます。',false);}
 }
 async function ready(){
 if(!window.supabase?.createClient){state('認証ライブラリを読み込めません。通信状態を確認してください。');return;}
 try{
 client=window.supabase.createClient(PROJECT_URL,PUBLIC_KEY);
 const {data,error}=await client.auth.getSession();if(error)throw error;
-render(data.session?.user);
-client.auth.onAuthStateChange((_event,session)=>{render(session?.user);if(session?.user){window.mkCloudCheck?.();window.mkAutoLoad?.();}});
+render(data.session?.user);window.mkRefreshMembership();
+client.auth.onAuthStateChange((_event,session)=>{render(session?.user);window.mkRefreshMembership();if(session?.user){window.mkCloudCheck?.();window.mkAutoLoad?.();}});
 if(data.session?.user){window.mkCloudCheck?.();window.mkAutoLoad?.();}
 }catch(e){state('接続エラー：'+errorText(e));}
 }
@@ -239,6 +268,9 @@ window.mkStartCheckout=async function(){
  try{
   const {data:auth,error:authError}=await client.auth.getSession();
   if(authError||!auth.session)throw Error('先にログインしてください');
+  const {data:existing,error:checkError}=await client.from('subscriptions').select('status').eq('user_id',auth.session.user.id).maybeSingle();
+  if(checkError)throw Error('契約確認に失敗しました：'+checkError.message);
+  if(existing&&activeStatuses.has(existing.status))throw Error('すでに有効な契約があります。重複契約はできません。');
   const {data,error}=await client.functions.invoke('create-checkout-session',{body:{}});
   if(error)throw Error(error.message||'決済ページを作成できません');
   if(!data?.url||!data.url.startsWith('https://checkout.stripe.com/'))throw Error(data?.error||'決済URLが取得できません');

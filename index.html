@@ -90,7 +90,7 @@ body.mk-locked #backupPanel .backup-restore { display:none !important; }
 .client-row{align-items:flex-start;flex-wrap:wrap}.client-row .actions{justify-content:flex-end}.client-row .actions button{min-width:55px;flex:0 0 auto;font-size:12px;padding:8px}
 </style></head><body class="mk-locked">
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.11.5 PDFプレビュー・顧客管理）</h2>
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.11.6 PDFプレビュー修正・顧客管理）</h2>
 <p class="muted">ログインしていれば解約後もクラウド復元できます。保存と復元は別操作です。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
 <div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元（解約後も可）</button></div>
 <div class="actions" style="margin-top:10px"><button type="button" class="soft" id="autoSyncToggle" onclick="mkAutoToggle()">自動保存：OFF（タップして有効化）</button></div>
@@ -222,7 +222,7 @@ function printAdjustmentRows(x){
 }
 // Ver.11.5: Generate an actual PDF from a VISIBLE off-screen clone, then preview it.
 let mkPdfUrl=null;
-function mkPdfClose(){const m=document.getElementById('mkPdfModal');if(m)m.remove();if(mkPdfUrl){URL.revokeObjectURL(mkPdfUrl);mkPdfUrl=null;}}
+function mkPdfClose(){const m=document.getElementById('mkPdfModal');if(m)m.remove();if(mkPdfUrl){URL.revokeObjectURL(mkPdfUrl);mkPdfUrl=null;}document.getElementById('mkPdfStyle')?.remove();}
 function mkLoadPdfLib(){return new Promise((resolve,reject)=>{if(window.html2pdf)return resolve();const script=document.createElement('script');script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('PDFライブラリを読み込めません。通信状態を確認してください。'));document.head.appendChild(script);});}
 async function openPrintPreview(){
  const old=document.getElementById('mkPdfModal');if(old)old.remove();
@@ -233,12 +233,20 @@ async function openPrintPreview(){
  try{
   await mkLoadPdfLib();
   clone=document.getElementById('printArea').cloneNode(true);clone.removeAttribute('id');
-  clone.style.cssText='display:block!important;position:fixed;left:-12000px;top:0;width:794px;max-width:none;background:#fff;color:#14253c;padding:48px;font:14px -apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;z-index:-1;';
-  const style=document.createElement('style');style.textContent=' .mk-pdf-render h1{color:#14253c;text-align:left;letter-spacing:.22em;font-size:25px;border-bottom:3px solid #14253c;padding-bottom:13px;margin:0 0 20px}.mk-pdf-render .meta{display:flex;justify-content:space-between;gap:25px;white-space:pre-line;margin-top:20px}.mk-pdf-render .meta>div{flex:1;min-width:0}.mk-pdf-render .meta>div:last-child{text-align:right}.mk-pdf-render table{width:100%;border-collapse:collapse;margin-top:22px;table-layout:fixed}.mk-pdf-render th{background:#14253c;color:white;font-weight:700}.mk-pdf-render th,.mk-pdf-render td{border-bottom:1px solid #dbe1e9;padding:10px 7px;overflow-wrap:anywhere}.mk-pdf-render th:first-child,.mk-pdf-render td:first-child{width:43%}.mk-pdf-render .right{text-align:right}.mk-pdf-render .total{font-size:18px;text-align:right;color:#14253c;font-weight:bold;border-top:2px solid #14253c;padding-top:12px;line-height:1.8}.mk-pdf-render .printLogo{max-width:125px;max-height:65px;object-fit:contain}.mk-pdf-render tr{break-inside:avoid}';document.head.appendChild(style);
+  clone.style.cssText='display:block!important;position:fixed;left:0;top:0;width:794px;max-width:none;background:#fff;color:#14253c;padding:48px;font:14px -apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;z-index:0;opacity:1;visibility:visible;';
+  const style=document.createElement('style');style.id='mkPdfStyle';style.textContent=' .mk-pdf-render h1{color:#14253c;text-align:left;letter-spacing:.22em;font-size:25px;border-bottom:3px solid #14253c;padding-bottom:13px;margin:0 0 20px}.mk-pdf-render .meta{display:flex;justify-content:space-between;gap:25px;white-space:pre-line;margin-top:20px}.mk-pdf-render .meta>div{flex:1;min-width:0}.mk-pdf-render .meta>div:last-child{text-align:right}.mk-pdf-render table{width:100%;border-collapse:collapse;margin-top:22px;table-layout:fixed}.mk-pdf-render th{background:#14253c;color:white;font-weight:700}.mk-pdf-render th,.mk-pdf-render td{border-bottom:1px solid #dbe1e9;padding:10px 7px;overflow-wrap:anywhere}.mk-pdf-render th:first-child,.mk-pdf-render td:first-child{width:43%}.mk-pdf-render .right{text-align:right}.mk-pdf-render .total{font-size:18px;text-align:right;color:#14253c;font-weight:bold;border-top:2px solid #14253c;padding-top:12px;line-height:1.8}.mk-pdf-render .printLogo{max-width:125px;max-height:65px;object-fit:contain}.mk-pdf-render tr{break-inside:avoid}';document.head.appendChild(style);
   clone.classList.add('mk-pdf-render');document.body.appendChild(clone);
   await Promise.all(Array.from(clone.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=r;img.onerror=r;setTimeout(r,3000)})));
   if(document.fonts&&document.fonts.ready)await document.fonts.ready;
   const opts={margin:0,filename:'見積もりくんPRO.pdf',image:{type:'jpeg',quality:0.97},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:900},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
+  // html2canvas cannot reliably capture content placed thousands of pixels off-screen on iOS.
+  // Keep the source within the viewport, behind the opaque preview overlay.
+  const probe=await window.html2canvas(clone,{scale:0.6,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0});
+  const ctx=probe.getContext('2d',{willReadFrequently:true});
+  const pixels=ctx.getImageData(0,0,probe.width,probe.height).data;
+  let dark=0;
+  for(let i=0;i<pixels.length;i+=64){if(pixels[i]<210||pixels[i+1]<210||pixels[i+2]<210)dark++;}
+  if(dark<20)throw new Error('PDFの元画像が白紙です。印刷方式に戻して利用してください。');
   const blob=await window.html2pdf().set(opts).from(clone).outputPdf('blob');
   if(!blob||blob.size<1000)throw new Error('PDFの生成結果が空です。');
   mkPdfUrl=URL.createObjectURL(blob);
@@ -247,7 +255,7 @@ async function openPrintPreview(){
   modal.querySelector('#mkPdfOpen').disabled=false;modal.querySelector('#mkPdfOpen').onclick=()=>window.open(mkPdfUrl,'_blank');
   modal.querySelector('#mkPdfSave').disabled=false;modal.querySelector('#mkPdfSave').onclick=()=>{const a=document.createElement('a');a.href=mkPdfUrl;a.download='見積もりくんPRO.pdf';document.body.appendChild(a);a.click();a.remove();};
  }catch(e){modal.querySelector('#mkPdfStatus').textContent='PDF生成に失敗しました：'+(e.message||e)+'。前の画面に戻ってください。';}
- finally{if(clone)clone.remove();}
+ finally{if(clone)clone.remove();document.getElementById('mkPdfStyle')?.remove();}
 }
 function printEstimate(){const x=calc(),f=form(),company=$('company').value,details=$('companyDetails').value;
 $('printArea').innerHTML=`<h1>御 見 積 書</h1>${logoData?'<img class="printLogo" src="'+logoData+'">':''}<p>見積有効期限：${esc($('validUntil').value)}</p><div class="meta"><div><strong style="font-size:18px">${esc(f.customer||'お客様')} 御中</strong><p>件名：${esc(f.project)}</p><p>施工場所：${esc(f.location)}</p></div><div>見積番号：${esc(f.number)}<br>見積日：${esc(f.date)}<br><br><strong>${esc(company)}</strong><br>${esc(details).replace(/\n/g,'<br>')}</div></div><p style="font-size:19px;border-bottom:2px solid #111;padding:10px">お見積金額（税込）　<strong>${yen(x.total)}</strong></p><table><thead><tr><th>品名・内容</th><th>数量</th><th>単位</th><th class="right">単価</th><th class="right">金額</th></tr></thead><tbody>${f.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${num(l.qty)}</td><td>${esc(l.unit||'式')}</td><td class="right">${yen(l.price)}</td><td class="right">${yen(num(l.qty)*num(l.price))}</td></tr>`).join('')}${printAdjustmentRows(x)}</tbody></table><div class="total">税抜：${yen(x.subtotal)}<br>消費税：${yen(x.tax)}<br>合計：${yen(x.total)}</div><p style="white-space:pre-wrap;margin-top:35px">備考：${esc(f.notes)}</p><p>工期：${esc(f.workPeriod||'—')}<br>支払条件：${esc(f.paymentTerms||'—')}</p><p>振込先：${esc($('bankDetails').value)}</p>`;openPrintPreview()}

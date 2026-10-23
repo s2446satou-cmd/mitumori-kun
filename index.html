@@ -72,7 +72,7 @@ body.mk-locked #backupPanel .backup-restore { display:none !important; }
 </style>
 </head><body class="mk-locked">
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.10.6 解約後クラウド復元対応）</h2>
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.10.7 復元結果表示改善）</h2>
 <p class="muted">ログインしていれば解約後もクラウド復元できます。保存と復元は別操作です。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
 <div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元（解約後も可）</button></div>
 <div class="actions" style="margin-top:10px"><button type="button" class="soft" id="autoSyncToggle" onclick="mkAutoToggle()">自動保存：OFF（タップして有効化）</button></div>
@@ -284,6 +284,22 @@ ready();
 (function(){
 const keys=['catalog','estimates','company','clients','invoiceSequence'];
 const status=msg=>document.getElementById('cloudStatus').textContent=msg;
+// Show the restore outcome independently of cloud-count checks after page reload.
+try {
+ const saved=sessionStorage.getItem('mk107_restore_success');
+ if(saved){
+  sessionStorage.removeItem('mk107_restore_success');
+  const info=JSON.parse(saved);
+  const panel=document.getElementById('cloudStatus');
+  if(panel){
+   const notice=document.createElement('p');
+   notice.setAttribute('role','status');
+   notice.style.cssText='background:#dcfce7;color:#14532d;padding:14px;border-radius:10px;font-weight:bold;';
+   notice.textContent='クラウド復元が完了しました（見積書 '+Number(info.count||0)+'件）。';
+   panel.parentNode.insertBefore(notice,panel);
+  }
+ }
+} catch(e){ console.warn('Restore notice:',e); }
 async function sessionClient(){
 const client=window.mkCloudClient?.();
 if(!client)throw Error('Supabaseに接続できていません');
@@ -374,6 +390,7 @@ for(const k of keys){
  else localStorage.setItem('mk2_'+k,JSON.stringify(payload[k]));
 }
 window.mkAutoRestored?.(user.id,data.updated_at);
+sessionStorage.setItem('mk107_restore_success',JSON.stringify({count:Array.isArray(payload.estimates)?payload.estimates.length:0,at:Date.now()}));
 location.reload();
 }catch(e){status('復元エラー：'+(e.message||e));}
 };

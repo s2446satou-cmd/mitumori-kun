@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>見積もりくん PRO Ver.8.0</title>
+<title>見積もりくん PRO Ver.11.7</title>
 <link rel="manifest" href="./manifest.webmanifest?v=100">
 <meta name="theme-color" content="#101f38">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -66,13 +66,31 @@ input,select,textarea{padding:10px!important;min-height:41px!important}textarea{
 @media(max-width:390px) { .basic-info input[type="date"] { font-size: 14px !important; } }
 
 /* Membership UI lock; server-side RLS is still required for actual access control. */
-body.mk-locked main.wrap > :not(#authPanel):not(#cloudPanel):not(#backupPanel) { display:none !important; }
+body.mk-locked main.wrap > :not(#authPanel):not(#cloudPanel):not(#backupPanel):not(#readonlyEstimates) { display:none !important; }
 body.mk-locked #backupPanel .backup-restore { display:none !important; }
 #memberPanel { margin:12px auto;max-width:720px; }
 </style>
-</head><body class="mk-locked">
+<style id="v111-design">
+@page{size:A4;margin:0}
+@media print{
+ #printArea{padding:13mm!important;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif!important;color:#14253c!important;font-size:10.5px!important}
+ #printArea h1{color:#14253c!important;text-align:left!important;letter-spacing:.22em!important;font-size:25px!important;border-bottom:3px solid #14253c;padding-bottom:13px;margin:0 0 20px}
+ #printArea .meta{margin-top:20px!important;gap:25px!important;align-items:flex-start}
+ #printArea .meta>div{flex:1;min-width:0}
+ #printArea .meta>div:last-child{text-align:right}
+ #printArea table{margin-top:22px!important;table-layout:fixed}
+ #printArea th{background:#14253c!important;color:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-weight:700}
+ #printArea th,#printArea td{border:0!important;border-bottom:1px solid #dbe1e9!important;padding:10px 7px!important;overflow-wrap:anywhere}
+ #printArea th:first-child,#printArea td:first-child{width:43%}
+ #printArea .total{color:#14253c!important;font-size:16px!important;border-top:2px solid #14253c;padding-top:12px;line-height:1.8}
+ #printArea .printLogo{max-width:125px;max-height:65px;object-fit:contain}
+ #printArea p{line-height:1.7}
+ #printArea tr{break-inside:avoid}
+}
+.client-row{align-items:flex-start;flex-wrap:wrap}.client-row .actions{justify-content:flex-end}.client-row .actions button{min-width:55px;flex:0 0 auto;font-size:12px;padding:8px}
+</style></head><body class="mk-locked">
 <header><h1>見積もりくん <span style="color:#7eb1ff">PRO</span></h1><p>現場でサクッと、文章入力から見積もり作成</p></header>
-<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.10.7 復元結果表示改善）</h2>
+<main class="wrap"><section class="card" id="cloudPanel"><h2>☁️ クラウドバックアップ（Ver.11.0 過去見積閲覧・単位入力）</h2>
 <p class="muted">ログインしていれば解約後もクラウド復元できます。保存と復元は別操作です。復元は端末内のデータを上書きするため、先にJSONバックアップを保存してください。</p>
 <div class="actions"><button type="button" class="primary" onclick="cloudSave()">クラウドへ保存</button><button type="button" class="soft" onclick="cloudRestore()">クラウドから復元（解約後も可）</button></div>
 <div class="actions" style="margin-top:10px"><button type="button" class="soft" id="autoSyncToggle" onclick="mkAutoToggle()">自動保存：OFF（タップして有効化）</button></div>
@@ -97,22 +115,22 @@ body.mk-locked #backupPanel .backup-restore { display:none !important; }
 <div class="field"><label>お客様名・会社名</label><input id="customer" placeholder="例：山田 太郎 様"></div>
 <div class="field"><label>工事件名</label><input id="project" placeholder="例：ルームエアコン交換工事"></div>
 <div class="field"><label>施工場所（任意）</label><input id="location" placeholder="例：千葉県松戸市"></div>
-<div class="field"><label>備考</label><textarea id="notes" placeholder="見積条件・有効期限など"></textarea></div></div>
+<div class="field"><label>備考</label><textarea id="notes" placeholder="見積条件・有効期限など"></textarea><div class="grid"><div class="field"><label>工期・施工予定</label><input id="workPeriod" placeholder="例：着工後2日間"></div><div class="field"><label>支払条件</label><input id="paymentTerms" placeholder="例：完了後翌月末払い"></div></div></div></div>
 <details class="card fold"><summary>✨ 文章から明細を作成</summary><p class="muted">例：エアコン交換、配管5m、化粧カバー3m、室外機屋根置き。登録単価とテンプレートを照合します。未登録の項目は金額0円で追加されるため、必ず確認してください。</p><div class="field"><label>工事内容を入力</label><textarea id="smartText" placeholder="エアコン交換、配管5m、化粧カバー3m、室外機屋根置き"></textarea></div><div class="actions"><button class="primary" onclick="smartEstimate()">文章から明細を作成</button><button class="soft" onclick="useTemplate()">工事テンプレートを選ぶ</button></div><div id="smartMessage" class="muted" style="margin-top:10px"></div></details>
-<div class="card"><h2>見積明細</h2><div id="lines"></div><p class="muted">明細欄をタップして項目名・数量・単価を入力できます。</p><div class="actions"><button class="soft" onclick="addLine()">＋ 明細を追加</button><button class="soft" onclick="addFromCatalog()">＋ 登録単価から追加</button></div><p class="muted">数量 × 単価で売価を計算。原価は利益計算にのみ使用し、見積書には表示しません。</p></div>
-<div class="card"><h2>集計・利益</h2><div class="grid"><div class="field"><label>消費税率（%）</label><input id="tax" type="number" min="0" max="100" value="" oninput="refresh()"></div><div class="field"><label>値引き（税抜・円）</label><input id="discount" type="number" min="0" value="" oninput="refresh()"></div></div>
-<div class="summary"><div class="sumrow"><span>税抜金額</span><span id="subtotal">¥0</span></div><div class="sumrow"><span>消費税</span><span id="taxAmount">¥0</span></div><div class="sumrow big"><span>税込合計</span><span id="total">¥0</span></div></div>
+<div class="card"><h2>見積明細</h2><div id="lines"></div><p class="muted">明細欄をタップして項目名・数量・単位・単価をそれぞれ入力できます。</p><div class="actions"><button class="soft" onclick="addLine()">＋ 明細を追加</button><button class="soft" onclick="addFromCatalog()">＋ 登録単価から追加</button></div><p class="muted">数量 × 単価で売価を計算。原価は利益計算にのみ使用し、見積書には表示しません。</p></div>
+<div class="card"><h2>集計・利益</h2><div class="grid"><div class="field"><label>消費税率（%）</label><input id="tax" type="number" min="0" max="100" value="" oninput="refresh()"></div><div class="field"><label>値引き（円または%）</label><select id="discountMode" onchange="refresh()"><option value="yen">金額（円）</option><option value="percent">割合（%）</option></select><input id="discount" type="number" min="0" value="" oninput="refresh()"></div></div>
+<div class="field"><label>金額の入力方法</label><select id="taxMode" onchange="refresh()"><option value="exclusive">税抜金額から計算</option><option value="inclusive">明細金額を税込として計算</option></select></div><div class="summary"><div class="sumrow"><span>税抜金額</span><span id="subtotal">¥0</span></div><div class="sumrow"><span>消費税</span><span id="taxAmount">¥0</span></div><div class="sumrow big"><span>税込合計</span><span id="total">¥0</span></div></div>
 <div class="grid" style="margin-top:12px"><div><div class="muted">想定原価</div><strong id="cost">¥0</strong></div><div><div class="muted">粗利益 / 粗利率</div><strong id="profit">¥0 / 0%</strong></div></div></div>
-<details class="card fold"><summary>🧮 工事原価・経費管理</summary><p class="muted">材料費・人工・外注費・諸経費を案件単位で入力。見積書には原価を表示しません。</p><div class="grid"><div class="field"><label>追加材料費（円）</label><input id="materialCost" type="number" min="0" value="" oninput="refresh()"></div><div class="field"><label>人工数（人日）</label><input id="laborDays" type="number" min="0" step="0.5" value="" oninput="refresh()"></div><div class="field"><label>人工原価（円/人日）</label><input id="laborRate" type="number" min="0" value="" oninput="refresh()"></div><div class="field"><label>外注費（円）</label><input id="subcontractCost" type="number" min="0" value="" oninput="refresh()"></div><div class="field"><label>交通費・駐車場・その他経費（円）</label><input id="otherCost" type="number" min="0" value="" oninput="refresh()"></div><div class="field"><label>諸経費（売価・税抜円）</label><input id="overheadPrice" type="number" min="0" value="" oninput="refresh()"></div></div><p class="muted">粗利＝税抜売価（諸経費込み・値引き後）－ 明細原価 － 追加原価。原価は概算です。</p></details><details class="card fold"><summary>📷 現場写真（案件別）</summary><p class="muted">写真はこの端末内の保存済み案件に紐づきます。容量節約のため縮小保存（最大6枚）。追加後は「この見積もりを保存」を押してください。</p><input type="file" accept="image/*" multiple onchange="addPhotos(this)"><div id="photoList" class="photoGrid"></div></details><div class="card"><h2>案件ステータス・請求管理</h2><div class="grid"><div class="field"><label>進捗状況</label><select id="status"><option>見積中</option><option>提出済</option><option>受注</option><option>施工中</option><option>完了</option><option>請求済</option><option>入金済</option></select></div><div class="field"><label>入金額（税込・円）</label><input id="paid" type="number" min="0" value=""></div><div class="field"><label>工事予定日</label><input id="workDate" type="date"></div><div class="field"><label>請求書番号</label><input id="invoiceNumber" placeholder="自動発行"></div><div class="field"><label>支払期限</label><input id="dueDate" type="date"></div></div><p class="muted">案件の進捗と入金状況を保存できます。入金額は手動登録です。</p><div class="actions"><button class="primary" onclick="convertInvoice()">見積から請求書へ変換</button><button class="dark" onclick="printInvoice()">請求書をPDF・印刷</button><button class="soft" onclick="printReceipt()">領収書をPDF・印刷</button></div></div><div class="card"><h2>保存・見積書出力</h2><div class="actions"><button class="primary" onclick="saveEstimate()">この見積もりを保存</button><button class="dark" onclick="printEstimate()">見積書をPDF・印刷</button><button class="soft" onclick="duplicateEstimate()">見積もりを複製</button><button class="soft" onclick="newEstimate()">新規作成</button></div><p class="muted">PDFはiPhoneの印刷画面から「共有」→「ファイルに保存」で保存できます。</p></div>
+<details class="card fold"><summary>🧮 工事原価・経費管理</summary><p class="muted">材料費・人工・外注費・諸経費を案件単位で入力。見積書には原価を表示しません。</p><div class="grid"><div class="field"><label>追加材料費（円）</label><input id="materialCost" type="number" min="0" value="" oninput="refresh()"></div><div class="field"><label>人工数（人日）</label><input id="laborDays" type="number" min="0" step="0.5" value="" oninput="refresh()"></div><div class="field"><label>人工原価（円/人日）</label><input id="laborRate" type="number" min="0" value="" oninput="refresh()"></div><div class="field"><label>外注費（円）</label><input id="subcontractCost" type="number" min="0" value="" oninput="refresh()"></div><div class="field"><label>交通費・駐車場・その他経費（円）</label><input id="otherCost" type="number" min="0" value="" oninput="refresh()"></div><div class="field"><label>諸経費（円または明細合計の%）</label><select id="overheadMode" onchange="refresh()"><option value="yen">金額（円）</option><option value="percent">割合（%）</option></select><input id="overheadPrice" type="number" min="0" value="" oninput="refresh()"></div></div><p class="muted">粗利＝税抜売価（諸経費込み・値引き後）－ 明細原価 － 追加原価。原価は概算です。</p></details><details class="card fold"><summary>📷 現場写真（案件別）</summary><p class="muted">写真はこの端末内の保存済み案件に紐づきます。容量節約のため縮小保存（最大6枚）。追加後は「この見積もりを保存」を押してください。</p><input type="file" accept="image/*" multiple onchange="addPhotos(this)"><div id="photoList" class="photoGrid"></div></details><div class="card"><h2>案件ステータス・請求管理</h2><div class="grid"><div class="field"><label>進捗状況</label><select id="status"><option>見積中</option><option>提出済</option><option>受注</option><option>施工中</option><option>完了</option><option>請求済</option><option>入金済</option></select></div><div class="field"><label>入金額（税込・円）</label><input id="paid" type="number" min="0" value=""></div><div class="field"><label>工事予定日</label><input id="workDate" type="date"></div><div class="field"><label>請求書番号</label><input id="invoiceNumber" placeholder="自動発行"></div><div class="field"><label>支払期限</label><input id="dueDate" type="date"></div></div><p class="muted">案件の進捗と入金状況を保存できます。入金額は手動登録です。</p><div class="actions"><button class="primary" onclick="convertInvoice()">見積から請求書へ変換</button><button class="dark" onclick="printInvoice()">請求書をPDF・印刷</button><button class="soft" onclick="printReceipt()">領収書をPDF・印刷</button></div></div><div class="card"><h2>保存・見積書出力</h2><div class="actions"><button class="primary" onclick="saveEstimate()">この見積もりを保存</button><button class="dark" onclick="printEstimate()">見積書をPDF・印刷</button><button class="soft" onclick="duplicateEstimate()">見積もりを複製</button><button class="soft" onclick="newEstimate()">新規作成</button></div><p class="muted">URLなし画像印刷を試します。iPhoneの印刷プレビューから保存できます。うまくいかない場合は従来方式に戻せます。</p></div>
 <details class="card fold"><summary>自社情報（見積書に表示）</summary><div class="field"><label>屋号・会社名</label><input id="company" placeholder="例：Y's エアワークス"></div><div class="field"><label>住所・電話・登録番号など</label><textarea id="companyDetails" placeholder="〒...&#10;TEL ..."></textarea></div><div class="grid"><div class="field"><label>振込先</label><textarea id="bankDetails" placeholder="銀行名・支店名・口座番号・名義"></textarea></div><div class="field"><label>見積有効期限</label><input id="validUntil" type="date"></div></div><div class="field"><label>会社ロゴ（画像を選択）</label><input type="file" accept="image/png,image/jpeg,image/webp" onchange="setLogo(this)"><img id="logoPreview" class="logoPreview" alt=""></div><button class="soft" onclick="saveCompany()">自社情報を保存</button></details>
 <details class="card fold"><summary>単価マスター</summary><div class="grid"><div class="field"><label>項目名</label><input id="catName" placeholder="例：エアコン取付"></div><div class="field"><label>単位</label><input id="catUnit" value="式"></div><div class="field"><label>売価単価（円）</label><input id="catPrice" type="number" min="0"></div><div class="field"><label>原価単価（円）</label><input id="catCost" type="number" min="0"></div></div><button class="soft" onclick="saveCatalog()">単価を登録</button><div id="catalogList"></div></details>
-<div class="card"><h2>経営ダッシュボード</h2><div id="dashboard" class="summary"></div><p class="muted">保存済み案件から算出。売上は「入金済」の税抜見積額を集計した参考値です。実際の会計売上や消費税申告額とは異なる場合があります。</p></div><details class="card fold"><summary>顧客台帳</summary><div class="grid"><div class="field"><label>顧客名</label><input id="clientName"></div><div class="field"><label>電話番号</label><input id="clientPhone" type="tel"></div><div class="field wide"><label>住所</label><input id="clientAddress" placeholder="郵便番号・住所"></div><div class="field wide"><label>メモ</label><input id="clientMemo"></div><button class="soft" onclick="addClient()">顧客を登録</button><div id="clientsList"></div></details><details class="card fold" id="backupPanel"><summary>データのバックアップ（解約後も保存可能）</summary><div class="actions"><button class="soft" onclick="exportData()">JSONバックアップ保存</button><button class="soft backup-restore" onclick="document.getElementById('importFile').click()">バックアップ復元</button><input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(this)"></div><p class="muted">復元すると現在のデータを上書きします。個人情報を含むバックアップファイルは安全に保管してください。</p></details><div class="card"><h2>保存済み見積もり</h2><div class="field"><label>保存済み見積もりを検索</label><input id="estimateSearch" placeholder="顧客名・件名・番号" oninput="renderSaved()"></div><div id="savedList"></div></div>
+<div class="card"><h2>経営ダッシュボード</h2><div id="dashboard" class="summary"></div><p class="muted">保存済み案件から算出。売上は「入金済」の税抜見積額を集計した参考値です。実際の会計売上や消費税申告額とは異なる場合があります。</p></div><details class="card fold" id="clientPanel"><summary>👥 顧客管理・顧客別見積履歴</summary><p class="muted">顧客を登録すると、見積書に呼び出せます。顧客情報は既存のバックアップ・クラウド保存対象です。</p><input type="hidden" id="clientEditId"><div class="grid"><div class="field"><label>顧客名・会社名</label><input id="clientName" placeholder="株式会社〇〇"></div><div class="field"><label>担当者名</label><input id="clientContact" placeholder="山田 太郎"></div><div class="field"><label>電話番号</label><input id="clientPhone" type="tel"></div><div class="field"><label>メールアドレス</label><input id="clientEmail" type="email"></div><div class="field wide"><label>住所</label><input id="clientAddress" placeholder="郵便番号・住所"></div><div class="field wide"><label>メモ</label><input id="clientMemo"></div></div><div class="actions"><button class="primary" onclick="addClient()" id="clientSaveButton">顧客を登録</button><button class="soft" onclick="resetClientForm()">入力をクリア</button></div><div class="field" style="margin-top:14px"><label>顧客検索</label><input id="clientSearch" placeholder="会社名・担当者名・電話番号" oninput="renderClients()"></div><div id="clientsList"></div><div id="clientHistory" aria-live="polite"></div></details><section class="card" id="readonlyEstimates"><h2>📁 過去の見積書（解約後も閲覧可）</h2><p class="muted">保存済みの見積書を閲覧できます。作成・編集・発行はPRO会員限定です。</p><div class="field"><label>過去の見積書を検索</label><input id="readonlySearch" placeholder="件名・顧客名・見積番号" oninput="renderReadonlyEstimates()"></div><div id="readonlyList"></div><div id="readonlyDetail" aria-live="polite"></div></section><details class="card fold" id="backupPanel"><summary>データのバックアップ（解約後も保存可能）</summary><div class="actions"><button class="soft" onclick="exportData()">JSONバックアップ保存</button><button class="soft backup-restore" onclick="document.getElementById('importFile').click()">バックアップ復元</button><input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(this)"></div><p class="muted">復元すると現在のデータを上書きします。個人情報を含むバックアップファイルは安全に保管してください。</p></details><div class="card"><h2>保存済み見積もり</h2><div class="field"><label>保存済み見積もりを検索</label><input id="estimateSearch" placeholder="顧客名・件名・番号" oninput="renderSaved()"></div><div id="savedList"></div></div>
 <div class="notice">⚠️ データは端末内に保存されます。クラウド機能はログインと手動保存または自動保存ONが必要です。SafariのWebサイトデータを削除する前にJSONバックアップを保存してください。実在の顧客情報を入れる前に、試作用の架空データで動作を確認してください。公開GitHubには顧客情報をアップロードしないでください。</div>
 </main><section id="printArea"></section>
 <script>
 const $=id=>document.getElementById(id), yen=n=>'¥'+Math.round(n||0).toLocaleString('ja-JP'), num=v=>Math.max(0,Number(v)||0);
 const get=(k,d)=>{try{return JSON.parse(localStorage.getItem('mk2_'+k))??d}catch(e){return d}},set=(k,v)=>{localStorage.setItem('mk2_'+k,JSON.stringify(v));window.mkAutoChanged?.();};
-const fields=['number','date','customer','project','location','notes','tax','discount','status','paid','workDate','dueDate','invoiceNumber','materialCost','laborDays','laborRate','subcontractCost','otherCost','overheadPrice'];
+const fields=['number','date','customer','project','location','notes','workPeriod','paymentTerms','tax','discount','discountMode','overheadMode','taxMode','status','paid','workDate','dueDate','invoiceNumber','materialCost','laborDays','laborRate','subcontractCost','otherCost','overheadPrice'];
 let photos=[];let currentId=null,lines=[],catalog=get('catalog',[]),estimates=get('estimates',[]);
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function addLine(item={name:'',qty:1,unit:'式',price:0,cost:0}){try{lines.push({...item});renderLines()}catch(e){console.error('明細追加エラー',e);alert('明細追加エラー: '+e.message)}}
@@ -120,11 +138,11 @@ function renderLines(){
  const host=$('lines');host.replaceChildren();
  lines.forEach((line,i)=>{
   const row=document.createElement('div');row.className='line';
-  for(const [label,key,kind] of [['項目名','name','text'],['数量','qty','number'],['売価/単位','price','number'],['原価/単位','cost','number']]){
+  for(const [label,key,kind] of [['項目名','name','text'],['数量','qty','number'],['単位','unit','text'],['売価単価（円）','price','number'],['原価/単位','cost','number']]){
    const box=document.createElement('div'),caption=document.createElement('label'),input=document.createElement('input');
    caption.textContent=label;input.type=kind;input.setAttribute('aria-label',label);
    if(kind==='number'){input.min='0';input.step='any';input.inputMode='decimal'}
-   input.value=(kind==='number' && num(line[key])===0)?'':(line[key]??'');input.placeholder=kind==='number'?'数字を入力':'';input.autocomplete='off';
+   input.value=(kind==='number' && num(line[key])===0)?'':(key==='unit'?(line[key]??'式'):(line[key]??''));input.placeholder=kind==='number'?'数字を入力':'';input.autocomplete='off';
    input.addEventListener('input',()=>{lines[i][key]=kind==='number'?num(input.value):input.value;refresh()});
    box.append(caption,input);row.append(box);
   }
@@ -133,13 +151,47 @@ function renderLines(){
  });refresh();
 }
 function updateLine(i,k,v){if(!lines[i])return;lines[i][k]=['qty','price','cost'].includes(k)?num(v):v;refresh()}
-function calc(){let raw=lines.reduce((a,l)=>a+num(l.qty)*num(l.price),0),subtotal=Math.max(0,raw+num($('overheadPrice').value)-num($('discount').value)),tax=Math.floor(subtotal*num($('tax').value)/100),cost=lines.reduce((a,l)=>a+num(l.qty)*num(l.cost),0)+num($('materialCost').value)+num($('laborDays').value)*num($('laborRate').value)+num($('subcontractCost').value)+num($('otherCost').value),profit=subtotal-cost;return {subtotal,tax,cost,profit,total:subtotal+tax,rate:subtotal?profit/subtotal*100:0}}
+function calc(){
+ const raw=lines.reduce((a,l)=>a+num(l.qty)*num(l.price),0);
+ const overheadMode=$('overheadMode').value;
+ const overhead=overheadMode==='percent'?Math.floor(raw*num($('overheadPrice').value)/100):num($('overheadPrice').value);
+ const discountBase=raw+overhead;
+ const discount=$('discountMode').value==='percent'?Math.floor(discountBase*num($('discount').value)/100):num($('discount').value);
+ const adjusted=Math.max(0,discountBase-discount);
+ const rate=num($('tax').value)/100;
+ const inclusive=$('taxMode').value==='inclusive';
+ const subtotal=inclusive?Math.round(adjusted/(1+rate)):adjusted;
+ const tax=inclusive?adjusted-subtotal:Math.floor(subtotal*rate);
+ const cost=lines.reduce((a,l)=>a+num(l.qty)*num(l.cost),0)+num($('materialCost').value)+num($('laborDays').value)*num($('laborRate').value)+num($('subcontractCost').value)+num($('otherCost').value);
+ const profit=subtotal-cost;
+ return {subtotal,tax,cost,profit,total:subtotal+tax,rate:subtotal?profit/subtotal*100:0,overhead,discount};
+}
 function refresh(){let x=calc();$('subtotal').textContent=yen(x.subtotal);$('taxAmount').textContent=yen(x.tax);$('total').textContent=yen(x.total);$('cost').textContent=yen(x.cost);$('profit').textContent=yen(x.profit)+' / '+x.rate.toFixed(1)+'%'}
 function form(){return {id:currentId||String(Date.now()),...Object.fromEntries(fields.map(k=>[k,$(k).value])),lines:structuredClone(lines),photos:structuredClone(photos)}}
-function saveEstimate(){let x=form();currentId=x.id;estimates=estimates.filter(e=>e.id!==x.id);estimates.unshift(x);try{set('estimates',estimates)}catch(e){alert('保存容量が足りません。写真を減らして再度保存してください');return}renderSaved();renderDashboard();alert('保存しました（この端末のブラウザ内）')}
-function loadEstimate(id){let x=estimates.find(e=>e.id===id);if(!x)return;currentId=id;fields.forEach(k=>$(k).value=x[k]??'');['tax','discount','paid','materialCost','laborDays','laborRate','subcontractCost','otherCost','overheadPrice'].forEach(k=>{if($(k).value!=='' && Number($(k).value)===0)$(k).value=''});lines=structuredClone(x.lines||[]);photos=structuredClone(x.photos||[]);renderPhotos();renderLines();window.scrollTo(0,0)}
-function deleteEstimate(id){if(!confirm('この見積もりを削除しますか？'))return;estimates=estimates.filter(e=>e.id!==id);set('estimates',estimates);renderSaved();renderDashboard()}
+function saveEstimate(){let x=form();currentId=x.id;estimates=estimates.filter(e=>e.id!==x.id);estimates.unshift(x);try{set('estimates',estimates)}catch(e){alert('保存容量が足りません。写真を減らして再度保存してください');return}renderSaved();renderReadonlyEstimates();renderDashboard();alert('保存しました（この端末のブラウザ内）')}
+function loadEstimate(id){let x=estimates.find(e=>e.id===id);if(!x)return;currentId=id;fields.forEach(k=>$(k).value=x[k]??'');['discountMode','overheadMode'].forEach(k=>{if(!$(k).value)$(k).value='yen'});if(!$('taxMode').value)$('taxMode').value='exclusive';['tax','discount','paid','materialCost','laborDays','laborRate','subcontractCost','otherCost','overheadPrice'].forEach(k=>{if($(k).value!=='' && Number($(k).value)===0)$(k).value=''});lines=structuredClone(x.lines||[]);photos=structuredClone(x.photos||[]);renderPhotos();renderLines();window.scrollTo(0,0)}
+function deleteEstimate(id){if(!confirm('この見積もりを削除しますか？'))return;estimates=estimates.filter(e=>e.id!==id);set('estimates',estimates);renderSaved();renderReadonlyEstimates();renderDashboard()}
 function renderSaved(){let q=($('estimateSearch')?.value||'').toLowerCase().trim(),matched=estimates.filter(e=>[e.project,e.customer,e.number,e.invoiceNumber].some(v=>String(v||'').toLowerCase().includes(q)));$('savedList').innerHTML=matched.length?matched.map(e=>`<div class="saved"><div><strong>${esc(e.project||'件名なし')}</strong><div class="muted">${esc(e.customer||'顧客未入力')} / ${esc(e.date||'')}</div></div><div class="actions"><button class="soft" onclick="loadEstimate('${e.id}')">開く</button><button class="danger" onclick="deleteEstimate('${e.id}')">削除</button></div></div>`).join(''):'<p class="muted">まだ保存した見積もりはありません。</p>'}
+function renderReadonlyEstimates(){
+ const host=$('readonlyList'), detail=$('readonlyDetail');if(!host)return;
+ if(document.body.dataset.signedIn!=='yes'){host.textContent='ログインすると過去の見積書を確認できます。';if(detail)detail.replaceChildren();return;}
+ const q=($('readonlySearch')?.value||'').toLowerCase().trim();
+ const data=get('estimates',[]);const matches=(Array.isArray(data)?data:[]).filter(e=>[e.project,e.customer,e.number].some(v=>String(v||'').toLowerCase().includes(q)));
+ host.replaceChildren();
+ if(!matches.length){host.textContent='保存済みの見積書はありません。';return;}
+ matches.forEach(e=>{const row=document.createElement('div');row.className='saved';const label=document.createElement('div');label.textContent=(e.project||'件名なし')+' / '+(e.customer||'顧客未入力')+' / '+(e.date||'');const btn=document.createElement('button');btn.className='soft';btn.textContent='閲覧';btn.type='button';btn.onclick=()=>showReadonlyEstimate(e.id);row.append(label,btn);host.append(row);});
+}
+function showReadonlyEstimate(id){
+ if(document.body.dataset.signedIn!=='yes')return;
+ const data=get('estimates',[]);const e=(Array.isArray(data)?data:[]).find(x=>String(x.id)===String(id));if(!e)return;
+ const host=$('readonlyDetail');host.replaceChildren();
+ const title=document.createElement('h3');title.textContent='見積書の内容（閲覧専用）';host.append(title);
+ for(const [label,val] of [['見積番号',e.number],['日付',e.date],['顧客名',e.customer],['件名',e.project],['施工場所',e.location]]){const p=document.createElement('p');p.textContent=label+'：'+(val||'—');host.append(p);}
+ const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;font-size:13px';const head=document.createElement('tr');for(const name of ['品名','数量','単位','単価','金額']){const th=document.createElement('th');th.textContent=name;th.style.cssText='border-bottom:1px solid #ddd;padding:6px 3px;text-align:left';head.append(th);}table.append(head);
+ let subtotal=0;for(const l of (Array.isArray(e.lines)?e.lines:[])){const qty=num(l.qty),price=num(l.price);subtotal+=qty*price;const tr=document.createElement('tr');for(const v of [l.name||'',String(qty),l.unit||'式',yen(price),yen(qty*price)]){const td=document.createElement('td');td.textContent=v;td.style.cssText='border-bottom:1px solid #eee;padding:7px 3px;overflow-wrap:anywhere';tr.append(td);}table.append(tr);}host.append(table);
+ const oh=e.overheadMode==='percent'?Math.floor(subtotal*num(e.overheadPrice)/100):num(e.overheadPrice);const db=subtotal+oh;const dis=e.discountMode==='percent'?Math.floor(db*num(e.discount)/100):num(e.discount);const adjusted=Math.max(0,db-dis);const tax=e.taxMode==='inclusive'?adjusted-Math.round(adjusted/(1+num(e.tax)/100)):Math.floor(adjusted*num(e.tax)/100);const beforeTax=e.taxMode==='inclusive'?adjusted-tax:adjusted;const total=document.createElement('p');total.style.fontWeight='bold';total.textContent='合計（税込）：'+yen(beforeTax+tax);host.append(total);
+ const note=document.createElement('p');note.textContent='備考：'+(e.notes||'—');host.append(note);
+}
 function duplicateEstimate(){currentId=null;$('number').value='EST-'+Date.now().toString().slice(-8);$('date').value=new Date().toLocaleDateString('sv-SE');alert('複製しました。元の見積もりとは別に保存できます。')}
 const templates={
 'ルームエアコン交換':['既存エアコン撤去','ルームエアコン取付','冷媒配管','真空引き・試運転'],
@@ -156,15 +208,73 @@ if(/エアコン.{0,8}(交換|入替|取替)|(?:交換|入替).{0,8}エアコン
 if(!items.length){$('smartMessage').textContent='認識できる工事項目がありません。単価マスターや手入力で追加してください。';return}
 if(lines.some(l=>l.name)&&!confirm('認識した明細を現在の見積もりに追加しますか？'))return;
 lines.push(...items);renderLines();$('smartMessage').textContent=items.length+'件の明細を追加しました。0円の項目や数量を確認し、必要な工事項目を補ってください。'}
-function newEstimate(){if(!confirm('新しい見積もりを作りますか？ 未保存の変更は失われます。'))return;currentId=null;fields.forEach(k=>$(k).value='');$('date').value=new Date().toLocaleDateString('sv-SE');$('number').value='EST-'+Date.now().toString().slice(-8);$('tax').value='';$('discount').value='';['materialCost','laborDays','laborRate','subcontractCost','otherCost','overheadPrice'].forEach(k=>$(k).value='');lines=[];photos=[];renderPhotos();addLine()}
+function newEstimate(){if(!confirm('新しい見積もりを作りますか？ 未保存の変更は失われます。'))return;currentId=null;fields.forEach(k=>$(k).value='');$('discountMode').value='yen';$('overheadMode').value='yen';$('taxMode').value='exclusive';$('date').value=new Date().toLocaleDateString('sv-SE');$('number').value='EST-'+Date.now().toString().slice(-8);$('tax').value='';$('discount').value='';['materialCost','laborDays','laborRate','subcontractCost','otherCost','overheadPrice'].forEach(k=>$(k).value='');lines=[];photos=[];renderPhotos();addLine()}
 function saveCompany(){set('company',{company:$('company').value,details:$('companyDetails').value,bank:$('bankDetails').value,validUntil:$('validUntil').value,logo:logoData});alert('自社情報を保存しました')}
 function saveCatalog(){let name=$('catName').value.trim();if(!name)return alert('項目名を入力してください');catalog.push({name,unit:$('catUnit').value||'式',price:num($('catPrice').value),cost:num($('catCost').value),qty:1});set('catalog',catalog);renderCatalog();$('catName').value='';$('catPrice').value='';$('catCost').value=''}
 function renderCatalog(){$('catalogList').innerHTML=catalog.map((c,i)=>`<div class="saved"><div><strong>${esc(c.name)}</strong><div class="muted">${yen(c.price)} / ${esc(c.unit)}</div></div><div class="actions"><button class="soft" onclick="lines.push({...catalog[${i}]});renderLines()">追加</button><button class="danger" onclick="catalog.splice(${i},1);set('catalog',catalog);renderCatalog()">削除</button></div></div>`).join('')}
 function addFromCatalog(){if(!catalog.length)return alert('下の「単価マスター」で単価を登録してください');$('catName').scrollIntoView({behavior:'smooth'})}
+// Ver.11.0: PDF-only summary rows. These are not saved as ordinary line items.
+function printAdjustmentRows(x){
+ let rows='';
+ if(x.overhead)rows+=`<tr><td>諸経費</td><td>1</td><td>式</td><td class="right">${yen(x.overhead)}</td><td class="right">${yen(x.overhead)}</td></tr>`;
+ if(x.discount)rows+=`<tr><td>値引き</td><td>1</td><td>式</td><td class="right">－${yen(x.discount)}</td><td class="right">－${yen(x.discount)}</td></tr>`;
+ return rows;
+}
+// Ver.11.7: Restore native iPhone/Safari print preview for reliable PDF export.
+// Ver.11.7: Render the existing print layout to an image, then use the native
+// iOS print sheet. The legacy print route remains available as a fallback.
+let mkPrintBusy=false;
+function mkLoadCapture(){
+ if(window.html2canvas)return Promise.resolve(window.html2canvas);
+ return new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+   script.onload=()=>window.html2canvas?resolve(window.html2canvas):reject(new Error('画像変換ライブラリを読み込めません'));
+   script.onerror=()=>reject(new Error('画像変換ライブラリを読み込めません。通信状態を確認してください'));
+   document.head.appendChild(script);
+ });
+}
+function mkLegacyPrint(){window.print()}
+async function openPrintPreview(){
+ if(mkPrintBusy)return;
+ mkPrintBusy=true;
+ const area=$('printArea');
+ const original=area.innerHTML;
+ const oldStyle=area.getAttribute('style');
+ const bodyScroll=window.scrollY;
+ try{
+   const capture=await mkLoadCapture();
+   // On iOS, offscreen and display:none elements can render as blank canvases.
+   // Make the original document visible at its final A4 width before capture.
+   area.style.cssText='display:block!important;position:relative!important;visibility:visible!important;width:794px!important;max-width:none!important;box-sizing:border-box!important;padding:49px!important;background:#fff!important;color:#14253c!important;z-index:2!important;';
+   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+   await Promise.all([...area.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(r=>{img.addEventListener('load',r,{once:true});img.addEventListener('error',r,{once:true});setTimeout(r,3000)})));
+   const canvas=await capture(area,{scale:1.5,backgroundColor:'#ffffff',useCORS:true,logging:false,windowWidth:850});
+   if(!canvas.width||!canvas.height)throw new Error('画像の作成に失敗しました');
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});
+   const data=ctx.getImageData(0,0,Math.min(canvas.width,80),Math.min(canvas.height,80)).data;
+   // A very small/empty capture is never sent to print.
+   if(canvas.width<400||canvas.height<150||!data.length)throw new Error('印刷画像が空です');
+   const imageData=canvas.toDataURL('image/png');
+   if(imageData.length<4000)throw new Error('印刷画像が空です');
+   area.innerHTML='<img alt="印刷用見積書" src="'+imageData+'" style="display:block;width:100%;height:auto">';
+   area.removeAttribute('style');
+   // Print CSS displays #printArea; browser is printing an image, not the page content.
+   await new Promise(r=>requestAnimationFrame(r));
+   window.print();
+   // Keep print content available while the iOS print sheet is presented.
+   setTimeout(()=>{area.innerHTML=original;if(oldStyle===null)area.removeAttribute('style');else area.setAttribute('style',oldStyle);window.scrollTo(0,bodyScroll);mkPrintBusy=false},1800);
+ }catch(err){
+   area.innerHTML=original;
+   if(oldStyle===null)area.removeAttribute('style');else area.setAttribute('style',oldStyle);
+   mkPrintBusy=false;
+   if(confirm('URLなし印刷の準備に失敗しました：'+(err.message||err)+'\n\n従来の印刷プレビューで開きますか？'))mkLegacyPrint();
+ }
+}
 function printEstimate(){const x=calc(),f=form(),company=$('company').value,details=$('companyDetails').value;
-$('printArea').innerHTML=`<h1>御 見 積 書</h1>${logoData?'<img class="printLogo" src="'+logoData+'">':''}<p>見積有効期限：${esc($('validUntil').value)}</p><div class="meta"><div><strong style="font-size:18px">${esc(f.customer||'お客様')} 御中</strong><p>件名：${esc(f.project)}</p><p>施工場所：${esc(f.location)}</p></div><div>見積番号：${esc(f.number)}<br>見積日：${esc(f.date)}<br><br><strong>${esc(company)}</strong><br>${esc(details).replace(/\n/g,'<br>')}</div></div><p style="font-size:19px;border-bottom:2px solid #111;padding:10px">お見積金額（税込）　<strong>${yen(x.total)}</strong></p><table><thead><tr><th>品名・内容</th><th>数量</th><th>単位</th><th class="right">単価</th><th class="right">金額</th></tr></thead><tbody>${f.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${num(l.qty)}</td><td>${esc(l.unit||'式')}</td><td class="right">${yen(l.price)}</td><td class="right">${yen(num(l.qty)*num(l.price))}</td></tr>`).join('')}</tbody></table>${num($('overheadPrice').value)?'<p>諸経費：'+yen(num($('overheadPrice').value))+'</p>':''}${num($('discount').value)?'<p>値引き：－'+yen(num($('discount').value))+'</p>':''}<div class="total">税抜：${yen(x.subtotal)}<br>消費税：${yen(x.tax)}<br>合計：${yen(x.total)}</div><p style="white-space:pre-wrap;margin-top:35px">備考：${esc(f.notes)}</p><p>振込先：${esc($('bankDetails').value)}</p>`;window.print()}
+$('printArea').innerHTML=`<h1>御 見 積 書</h1>${logoData?'<img class="printLogo" src="'+logoData+'">':''}<p>見積有効期限：${esc($('validUntil').value)}</p><div class="meta"><div><strong style="font-size:18px">${esc(f.customer||'お客様')} 御中</strong><p>件名：${esc(f.project)}</p><p>施工場所：${esc(f.location)}</p></div><div>見積番号：${esc(f.number)}<br>見積日：${esc(f.date)}<br><br><strong>${esc(company)}</strong><br>${esc(details).replace(/\n/g,'<br>')}</div></div><p style="font-size:19px;border-bottom:2px solid #111;padding:10px">お見積金額（税込）　<strong>${yen(x.total)}</strong></p><table><thead><tr><th>品名・内容</th><th>数量</th><th>単位</th><th class="right">単価</th><th class="right">金額</th></tr></thead><tbody>${f.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${num(l.qty)}</td><td>${esc(l.unit||'式')}</td><td class="right">${yen(l.price)}</td><td class="right">${yen(num(l.qty)*num(l.price))}</td></tr>`).join('')}${printAdjustmentRows(x)}</tbody></table><div class="total">税抜：${yen(x.subtotal)}<br>消費税：${yen(x.tax)}<br>合計：${yen(x.total)}</div><p style="white-space:pre-wrap;margin-top:35px">備考：${esc(f.notes)}</p><p>工期：${esc(f.workPeriod||'—')}<br>支払条件：${esc(f.paymentTerms||'—')}</p><p>振込先：${esc($('bankDetails').value)}</p>`;openPrintPreview()}
 let clients=get('clients',[]);
-let logoData=get('company',{}).logo||'';const c=get('company',{});$('company').value=c.company||'';$('companyDetails').value=c.details||'';$('bankDetails').value=c.bank||'';$('validUntil').value=c.validUntil||'';$('logoPreview').src=logoData;$('date').value=new Date().toLocaleDateString('sv-SE');$('number').value='EST-'+Date.now().toString().slice(-8);addLine();renderSaved();renderCatalog();renderClients();renderDashboard();
+let logoData=get('company',{}).logo||'';const c=get('company',{});$('company').value=c.company||'';$('companyDetails').value=c.details||'';$('bankDetails').value=c.bank||'';$('validUntil').value=c.validUntil||'';$('logoPreview').src=logoData;$('date').value=new Date().toLocaleDateString('sv-SE');$('number').value='EST-'+Date.now().toString().slice(-8);addLine();renderSaved();renderReadonlyEstimates();renderCatalog();renderClients();renderDashboard();
 
 
 function renderPhotos(){ $('photoList').innerHTML=photos.map((src,i)=>`<figure><img src="${src}" alt="現場写真${i+1}"><button class="danger" onclick="photos.splice(${i},1);renderPhotos()">削除</button></figure>`).join('')}
@@ -172,12 +282,25 @@ async function addPhotos(input){const files=[...input.files];for(const file of f
 
 function setLogo(input){let f=input.files[0];if(!f)return;if(f.size>250000)return alert('ロゴ画像は250KB以下にしてください');let reader=new FileReader();reader.onload=()=>{logoData=reader.result;$('logoPreview').src=logoData};reader.readAsDataURL(f)}
 function docPrint(title){let x=calc(),f=form();if(title==='領収書' && num($('paid').value)<=0)return alert('領収書を作るには入金額を入力してください');let amount=title==='領収書'?num($('paid').value):x.total;
-$('printArea').innerHTML=`<h1>${title}</h1>${title==='請 求 書'?'<p>請求書番号：'+esc(f.invoiceNumber||'')+'</p>':''}${logoData?'<img class="printLogo" src="'+logoData+'">':''}<div class="meta"><div><h2>${esc(f.customer||'お客様')} 御中</h2><p>件名：${esc(f.project)}</p><p>発行日：${esc(new Date().toLocaleDateString('sv-SE'))}</p><p>支払期限：${esc($('dueDate').value)}</p></div><div><strong>${esc($('company').value)}</strong><p>${esc($('companyDetails').value).replace(/\n/g,'<br>')}</p></div></div><p class="total">${title==='領収書'?'領収金額':'ご請求金額'}（税込） ${yen(amount)}</p><table><thead><tr><th>項目</th><th>数量</th><th>単価</th><th>金額</th></tr></thead><tbody>${f.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${num(l.qty)}</td><td>${yen(l.price)}</td><td>${yen(num(l.qty)*num(l.price))}</td></tr>`).join('')}</tbody></table>${num($('overheadPrice').value)?'<p>諸経費：'+yen(num($('overheadPrice').value))+'</p>':''}${num($('discount').value)?'<p>値引き：－'+yen(num($('discount').value))+'</p>':''}<p>税抜見積額：${yen(x.subtotal)} / 消費税：${yen(x.tax)}</p><p>振込先：${esc($('bankDetails').value).replace(/\n/g,'<br>')}</p><p>備考：${esc(f.notes)}</p>`;window.print()}
+$('printArea').innerHTML=`<h1>${title}</h1>${title==='請 求 書'?'<p>請求書番号：'+esc(f.invoiceNumber||'')+'</p>':''}${logoData?'<img class="printLogo" src="'+logoData+'">':''}<div class="meta"><div><h2>${esc(f.customer||'お客様')} 御中</h2><p>件名：${esc(f.project)}</p><p>発行日：${esc(new Date().toLocaleDateString('sv-SE'))}</p><p>支払期限：${esc($('dueDate').value)}</p></div><div><strong>${esc($('company').value)}</strong><p>${esc($('companyDetails').value).replace(/\n/g,'<br>')}</p></div></div><p class="total">${title==='領収書'?'領収金額':'ご請求金額'}（税込） ${yen(amount)}</p><table><thead><tr><th>項目</th><th>数量</th><th>単位</th><th class="right">単価</th><th class="right">金額</th></tr></thead><tbody>${f.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${num(l.qty)}</td><td>${esc(l.unit||'式')}</td><td class="right">${yen(l.price)}</td><td class="right">${yen(num(l.qty)*num(l.price))}</td></tr>`).join('')}${printAdjustmentRows(x)}</tbody></table><p>税抜見積額：${yen(x.subtotal)} / 消費税：${yen(x.tax)}</p><p>振込先：${esc($('bankDetails').value).replace(/\n/g,'<br>')}</p><p>備考：${esc(f.notes)}</p><p>工期：${esc(f.workPeriod||'—')} / 支払条件：${esc(f.paymentTerms||'—')}</p>`;openPrintPreview()}
 function convertInvoice(){if(!lines.length||!lines.some(l=>l.name.trim()))return alert('明細を入力してください');if(!$('invoiceNumber').value){let n=get('invoiceSequence',0)+1;set('invoiceSequence',n);$('invoiceNumber').value='INV-'+new Date().getFullYear()+'-'+String(n).padStart(4,'0')} $('status').value='請求済';saveEstimate();alert('請求書に変換しました。請求書PDF・印刷から発行できます。')}function printInvoice(){if(!$('invoiceNumber').value){convertInvoice();if(!$('invoiceNumber').value)return}docPrint('請 求 書')}function printReceipt(){docPrint('領 収 書')}
-function addClient(){let name=$('clientName').value.trim();if(!name)return alert('顧客名を入力してください');clients.push({name,phone:$('clientPhone').value,address:$('clientAddress').value,memo:$('clientMemo').value});set('clients',clients);['clientName','clientPhone','clientAddress','clientMemo'].forEach(k=>$(k).value='');renderClients()}
-function renderClients(){$('clientsList').innerHTML=clients.map((c,i)=>`<div class="saved"><div><strong>${esc(c.name)}</strong><div class="mini">${esc(c.phone)} ${esc(c.address||'')} ${esc(c.memo)}</div></div><div class="actions"><button class="soft" onclick="$('customer').value=clients[${i}].name;$('location').value=clients[${i}].address||'';window.scrollTo(0,0)">見積へ</button><button class="danger" onclick="clients.splice(${i},1);set('clients',clients);renderClients()">削除</button></div></div>`).join('')}
+function resetClientForm(){['clientEditId','clientName','clientContact','clientPhone','clientEmail','clientAddress','clientMemo'].forEach(k=>$(k).value='');$('clientSaveButton').textContent='顧客を登録'}
+function addClient(){
+ const name=$('clientName').value.trim();if(!name)return alert('顧客名・会社名を入力してください');
+ const obj={name,contact:$('clientContact').value.trim(),phone:$('clientPhone').value.trim(),email:$('clientEmail').value.trim(),address:$('clientAddress').value.trim(),memo:$('clientMemo').value.trim()};
+ const id=$('clientEditId').value;
+ if(id){const i=clients.findIndex(c=>String(c.id)===id);if(i<0)return alert('編集対象が見つかりません');clients[i]={...clients[i],...obj};}
+ else clients.push({...obj,id:'c'+Date.now()+'_'+Math.random().toString(36).slice(2,7)});
+ set('clients',clients);resetClientForm();renderClients();
+}
+function editClient(i){const c=clients[i];if(!c)return;if(!c.id){c.id='c'+Date.now()+'_'+i;set('clients',clients)}$('clientEditId').value=c.id;for(const [k,v] of Object.entries({clientName:c.name,clientContact:c.contact,clientPhone:c.phone,clientEmail:c.email,clientAddress:c.address,clientMemo:c.memo}))$(k).value=v||'';$('clientSaveButton').textContent='変更を保存';$('clientPanel').open=true;$('clientName').focus()}
+function deleteClient(i){if(!confirm('この顧客を削除しますか？ 保存済み見積書は削除されません。'))return;clients.splice(i,1);set('clients',clients);resetClientForm();renderClients();$('clientHistory').replaceChildren()}
+function useClient(i){const c=clients[i];if(!c)return;$('customer').value=c.name||'';if(c.address)$('location').value=c.address;$('clientPanel').open=false;window.scrollTo({top:0,behavior:'smooth'})}
+function clientHistory(i){const c=clients[i];if(!c)return;const host=$('clientHistory');host.replaceChildren();const h=document.createElement('h3');h.textContent=(c.name||'')+' の見積履歴';host.append(h);const matches=estimates.filter(e=>String(e.customer||'').trim()===String(c.name||'').trim());if(!matches.length){const p=document.createElement('p');p.className='muted';p.textContent='この顧客の保存済み見積書はありません。';host.append(p);return;}matches.forEach(e=>{const row=document.createElement('div');row.className='saved';const label=document.createElement('div');label.textContent=(e.date||'')+' / '+(e.project||'件名なし')+' / '+(e.number||'');const btn=document.createElement('button');btn.className='soft';btn.textContent='開く';btn.onclick=()=>loadEstimate(e.id);row.append(label,btn);host.append(row)})}
+function renderClients(){const q=($('clientSearch')?.value||'').trim().toLowerCase();$('clientsList').innerHTML=clients.map((c,i)=>({c,i})).filter(({c})=>[c.name,c.contact,c.phone,c.email,c.address].some(v=>String(v||'').toLowerCase().includes(q))).map(({c,i})=>`<div class="saved client-row"><div><strong>${esc(c.name)}</strong><div class="mini">${esc(c.contact||'')} ${esc(c.phone||'')}<br>${esc(c.email||'')}<br>${esc(c.address||'')}</div></div><div class="actions"><button class="soft" onclick="useClient(${i})">見積へ</button><button class="soft" onclick="editClient(${i})">編集</button><button class="soft" onclick="clientHistory(${i})">履歴</button><button class="danger" onclick="deleteClient(${i})">削除</button></div></div>`).join('')||'<p class="muted">該当する顧客はありません。</p>'}
+
 function renderDashboard(){
- const invoiceValue=e=>{let sub=Math.max(0,(e.lines||[]).reduce((a,l)=>a+num(l.qty)*num(l.price),0)+num(e.overheadPrice)-num(e.discount));return {sub,total:sub+Math.floor(sub*num(e.tax)/100),cost:(e.lines||[]).reduce((a,l)=>a+num(l.qty)*num(l.cost),0)+num(e.materialCost)+num(e.laborDays)*num(e.laborRate)+num(e.subcontractCost)+num(e.otherCost)}};
+ const invoiceValue=e=>{let raw=(e.lines||[]).reduce((a,l)=>a+num(l.qty)*num(l.price),0);let oh=e.overheadMode==='percent'?Math.floor(raw*num(e.overheadPrice)/100):num(e.overheadPrice);let base=raw+oh;let dis=e.discountMode==='percent'?Math.floor(base*num(e.discount)/100):num(e.discount);let adjusted=Math.max(0,base-dis);let sub=e.taxMode==='inclusive'?Math.round(adjusted/(1+num(e.tax)/100)):adjusted;return {sub,total:e.taxMode==='inclusive'?adjusted:sub+Math.floor(sub*num(e.tax)/100),cost:(e.lines||[]).reduce((a,l)=>a+num(l.qty)*num(l.cost),0)+num(e.materialCost)+num(e.laborDays)*num(e.laborRate)+num(e.subcontractCost)+num(e.otherCost)}};
  const month=new Date().toISOString().slice(0,7), active=estimates.filter(e=>String(e.date||'').slice(0,7)===month), billed=active.filter(e=>['請求済','入金済'].includes(e.status)), sales=billed.reduce((a,e)=>a+invoiceValue(e).sub,0), costs=billed.reduce((a,e)=>a+invoiceValue(e).cost,0);
  const pending=estimates.filter(e=>e.status==='請求済').reduce((a,e)=>a+Math.max(0,invoiceValue(e).total-num(e.paid)),0);
  const byClient={};estimates.filter(e=>['請求済','入金済'].includes(e.status)).forEach(e=>{let n=e.customer||'顧客未入力';byClient[n]=(byClient[n]||0)+invoiceValue(e).sub});
@@ -228,7 +351,7 @@ function state(msg){el('authState').textContent=msg;}
 function errorText(e){return e?.message||'通信に失敗しました';}
 function render(user){
 el('authForm').hidden=!!user;el('authSigned').hidden=!user;
-state(user?'ログイン中：'+user.email:'未ログイン（会員登録またはログインしてください）');
+state(user?'ログイン中：'+user.email:'未ログイン（会員登録またはログインしてください）');document.body.dataset.signedIn=user?'yes':'no';window.renderReadonlyEstimates?.();
 if(!user){++memberCheckId;membershipUI('ログインすると契約状況を確認できます。',false);}
 }
 async function ready(){

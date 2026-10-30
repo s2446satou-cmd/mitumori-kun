@@ -125,6 +125,16 @@ body.mk-locked #backupPanel .backup-restore { display:none !important; }
 <details class="card fold"><summary>自社情報（見積書に表示）</summary><div class="field"><label>屋号・会社名</label><input id="company" placeholder="例：Y's エアワークス"></div><div class="field"><label>住所・電話・登録番号など</label><textarea id="companyDetails" placeholder="〒...&#10;TEL ..."></textarea></div><div class="grid"><div class="field"><label>振込先</label><textarea id="bankDetails" placeholder="銀行名・支店名・口座番号・名義"></textarea></div><div class="field"><label>見積有効期限</label><input id="validUntil" type="date"></div></div><div class="field"><label>会社ロゴ（画像を選択）</label><input type="file" accept="image/png,image/jpeg,image/webp" onchange="setLogo(this)"><img id="logoPreview" class="logoPreview" alt=""></div><button class="soft" onclick="saveCompany()">自社情報を保存</button></details>
 <details class="card fold"><summary>単価マスター</summary><div class="grid"><div class="field"><label>項目名</label><input id="catName" placeholder="例：エアコン取付"></div><div class="field"><label>単位</label><input id="catUnit" value="式"></div><div class="field"><label>売価単価（円）</label><input id="catPrice" type="number" min="0"></div><div class="field"><label>原価単価（円）</label><input id="catCost" type="number" min="0"></div></div><button class="soft" onclick="saveCatalog()">単価を登録</button><div id="catalogList"></div></details>
 <div class="card"><h2>経営ダッシュボード</h2><div id="dashboard" class="summary"></div><p class="muted">保存済み案件から算出。売上は「入金済」の税抜見積額を集計した参考値です。実際の会計売上や消費税申告額とは異なる場合があります。</p></div><details class="card fold" id="clientPanel"><summary>👥 顧客管理・顧客別見積履歴</summary><p class="muted">顧客を登録すると、見積書に呼び出せます。顧客情報は既存のバックアップ・クラウド保存対象です。</p><input type="hidden" id="clientEditId"><div class="grid"><div class="field"><label>顧客名・会社名</label><input id="clientName" placeholder="株式会社〇〇"></div><div class="field"><label>担当者名</label><input id="clientContact" placeholder="山田 太郎"></div><div class="field"><label>電話番号</label><input id="clientPhone" type="tel"></div><div class="field"><label>メールアドレス</label><input id="clientEmail" type="email"></div><div class="field wide"><label>住所</label><input id="clientAddress" placeholder="郵便番号・住所"></div><div class="field wide"><label>メモ</label><input id="clientMemo"></div></div><div class="actions"><button class="primary" onclick="addClient()" id="clientSaveButton">顧客を登録</button><button class="soft" onclick="resetClientForm()">入力をクリア</button></div><div class="field" style="margin-top:14px"><label>顧客検索</label><input id="clientSearch" placeholder="会社名・担当者名・電話番号" oninput="renderClients()"></div><div id="clientsList"></div><div id="clientHistory" aria-live="polite"></div></details><section class="card" id="readonlyEstimates"><h2>📁 過去の見積書（解約後も閲覧可）</h2><p class="muted">保存済みの見積書を閲覧できます。作成・編集・発行はPRO会員限定です。</p><div class="field"><label>過去の見積書を検索</label><input id="readonlySearch" placeholder="件名・顧客名・見積番号" oninput="renderReadonlyEstimates()"></div><div id="readonlyList"></div><div id="readonlyDetail" aria-live="polite"></div></section><details class="card fold" id="backupPanel"><summary>データのバックアップ（解約後も保存可能）</summary><div class="actions"><button class="soft" onclick="exportData()">JSONバックアップ保存</button><button class="soft backup-restore" onclick="document.getElementById('importFile').click()">バックアップ復元</button><input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(this)"></div><p class="muted">復元すると現在のデータを上書きします。個人情報を含むバックアップファイルは安全に保管してください。</p></details><div class="card"><h2>保存済み見積もり</h2><div class="field"><label>保存済み見積もりを検索</label><input id="estimateSearch" placeholder="顧客名・件名・番号" oninput="renderSaved()"></div><div id="savedList"></div></div>
+<section class="card" id="contactPanel" style="max-width:720px;margin:14px auto">
+<h2>✉️ お問い合わせ</h2>
+<p class="muted">サービスに関するご質問・不具合のご連絡はこちらから。現在はログインした方のみ送信できます。返信は入力したメールアドレスにお送りします。</p>
+<form id="mkContactForm" onsubmit="mkSendContact(event)">
+<div class="grid"><div class="field"><label for="mkContactName">お名前（必須）</label><input id="mkContactName" required maxlength="100" autocomplete="name"></div><div class="field"><label for="mkContactEmail">返信先メールアドレス（必須）</label><input id="mkContactEmail" type="email" required maxlength="254" autocomplete="email"></div></div>
+<div class="field"><label for="mkContactSubject">お問い合わせ種別</label><select id="mkContactSubject"><option>サービスについて</option><option>決済・契約について</option><option>不具合の報告</option><option>その他</option></select></div>
+<div class="field"><label for="mkContactMessage">お問い合わせ内容（必須）</label><textarea id="mkContactMessage" required minlength="10" maxlength="3000" rows="6" placeholder="10文字以上でご入力ください"></textarea></div>
+<div class="actions"><button type="submit" class="primary" id="mkContactSend">お問い合わせを送信</button></div>
+<p id="mkContactStatus" class="muted" role="status" aria-live="polite">送信にはログインが必要です。※このフォームはデータベースに安全に保存します。メール通知は未設定です。</p>
+</form></section>
 <div class="notice">⚠️ データは端末内に保存されます。クラウド機能はログインと手動保存または自動保存ONが必要です。SafariのWebサイトデータを削除する前にJSONバックアップを保存してください。実在の顧客情報を入れる前に、試作用の架空データで動作を確認してください。公開GitHubには顧客情報をアップロードしないでください。</div>
 </main><section id="printArea"></section>
 <script>
@@ -609,4 +619,28 @@ async function mk118Share(){
  const a=document.createElement('a');a.href=mk118url;a.download=mk118file.name;a.click();
  alert('画像を保存しました。写真またはファイルアプリから「共有」→「プリント」を選んでください。');
 }
+</script><script>
+// Contact submissions are write-only for signed-in users; administrator reads via Supabase dashboard.
+window.mkSendContact=async function(event){
+ event.preventDefault();
+ const status=document.getElementById('mkContactStatus');
+ const button=document.getElementById('mkContactSend');
+ const client=window.mkCloudClient?.();
+ if(!client){status.textContent='接続の準備中です。少し待ってから再度お試しください。';return;}
+ button.disabled=true;status.textContent='送信中です…';
+ try{
+  const {data,error:authError}=await client.auth.getUser();
+  if(authError||!data?.user)throw new Error('先に会員ログインしてください。');
+  const name=document.getElementById('mkContactName').value.trim();
+  const email=document.getElementById('mkContactEmail').value.trim();
+  const subject=document.getElementById('mkContactSubject').value;
+  const message=document.getElementById('mkContactMessage').value.trim();
+  if(!name||name.length>100||!email||email.length>254||!/^\S+@\S+\.\S+$/.test(email)||message.length<10||message.length>3000)throw new Error('入力内容を確認してください（本文は10〜3000文字）。');
+  const {error}=await client.from('contact_messages').insert({user_id:data.user.id,name,email,subject,message});
+  if(error)throw error;
+  document.getElementById('mkContactForm').reset();
+  status.textContent='お問い合わせを受け付けました。ありがとうございます。';
+ }catch(e){status.textContent='送信できませんでした：'+(e.message||String(e));}
+ finally{button.disabled=false;}
+};
 </script></body></html>
